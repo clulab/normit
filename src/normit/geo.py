@@ -1,8 +1,15 @@
 import dataclasses
-import shapely
-import shapely.affinity
 import geopandas
 import matplotlib.pyplot as plt
+import pint
+import pyproj
+import pyproj.enums
+import shapely
+import shapely.affinity
+import shapely.ops
+import utm
+
+UNITS = pint.UnitRegistry()
 
 
 def show_plot(*geometries: shapely.geometry.base.BaseGeometry):
@@ -18,22 +25,24 @@ class GeoCardinal:
 
     def of(self,
            geometry: shapely.geometry.base.BaseGeometry,
-           distance: float = None) -> shapely.Polygon:
-        centroid = geometry.centroid
-        d, start_distance = _diameter_and_start(geometry, distance)
+           distance: pint.Quantity = None) -> shapely.Polygon:
+
+        # start with the circle or ring defined by Near
+        result = Near.to(geometry, distance)
+
         # create point at azimuth 0 (North) and rotate (negative = clockwise)
-        point = shapely.Point(centroid.x, centroid.y + start_distance + d)
-        point = shapely.affinity.rotate(point, -self.azimuth, origin=centroid)
-        # collect points along the arc
-        arc = [shapely.affinity.rotate(point, -angle, origin=centroid)
-               for angle in range(-45, +45 + 1, 15)]
-        # add the centroid and construct the polygon
-        result = shapely.Polygon([centroid] + arc + [centroid])
-        # if a distance is provided, remove the region nearest to the input
-        if distance is not None and start_distance > 0:
-            result -= geometry.centroid.buffer(start_distance)
-        # keep only the region that does not overlap with the input
-        return result - geometry
+        radius = shapely.minimum_bounding_radius(result)
+        c = geometry.centroid
+        p = shapely.Point(c.x, c.y + radius * 1.5)
+        p = shapely.affinity.rotate(p, -self.azimuth, origin=c)
+
+        # construct a roughly sector-shaped polygon
+        p45n = shapely.affinity.rotate(p, -45, origin=c)
+        p45p = shapely.affinity.rotate(p, +45, origin=c)
+        sector = shapely.convex_hull(shapely.MultiPoint([c, p45n, p, p45p]))
+
+        # keep only the selected sector of the circle or ring
+        return result.intersection(sector)
 
     def part_of(self, geometry: shapely.geometry.base.BaseGeometry):
         d = shapely.minimum_bounding_radius(geometry) * 2
@@ -64,12 +73,27 @@ NorthWest = GeoCardinal(azimuth=315)
 class Near:
     @staticmethod
     def to(geometry: shapely.geometry.base.BaseGeometry,
-           distance: float = None):
-        d, start_distance = _diameter_and_start(geometry, distance)
-        result = geometry.centroid.buffer(start_distance + d)
-        if distance is not None and start_distance > 0:
-            result -= geometry.centroid.buffer(start_distance)
-        return result - geometry
+           distance: pint.Quantity = None):
+        # project to UTM where we can measure distance in meters
+        lon = geometry.centroid.x
+        lat = geometry.centroid.y
+        utm_zone = utm.latlon_to_zone_number(lon, lat)
+        proj = pyproj.Proj(proj='utm', zone=utm_zone, ellps='WGS84')
+        geometry = shapely.ops.transform(proj, geometry)
+        # if no distance is specified, construct a circle of twice the radius
+        radius = shapely.minimum_bounding_radius(geometry)
+        if distance is None:
+            result = geometry.centroid.buffer(radius * 2)
+        # if a distance is specified, construct a ring at that distance
+        else:
+            start_dist = max(0.0, distance.to(UNITS.meter).magnitude - radius)
+            result = (geometry.centroid.buffer(start_dist + radius * 2) -
+                      geometry.centroid.buffer(start_dist))
+        # remove any overlap with the original geometry
+        result -= geometry
+        # project back to latitude, longitude
+        return shapely.ops.transform(lambda *args: proj(*args, inverse=True),
+                                     result)
 
 
 class Between:
@@ -96,16 +120,6 @@ class GeoJsonDirReader:
             if not cuts and not dangles and not invalid:
                 geometry = shapely.multipolygons(shapely.get_parts(polygons))
         return geometry
-
-
-def _diameter_and_start(geometry: shapely.geometry.base.BaseGeometry,
-                        distance: float = None) -> (float, float):
-    radius = shapely.minimum_bounding_radius(geometry)
-    if distance is None:
-        start_distance = radius
-    else:
-        start_distance = max(0.0, distance - radius)
-    return radius * 2, start_distance
 
 
 def _line_through_centroid_perpendicular_to_point(
