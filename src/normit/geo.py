@@ -12,12 +12,6 @@ def show_plot(*geometries: shapely.geometry.base.BaseGeometry):
     plt.show()
 
 
-def diameter(geometry: shapely.geometry.base.BaseGeometry):
-    coords = geometry.minimum_rotated_rectangle.exterior.coords
-    corner0, corner1, corner2, _, _ = map(shapely.geometry.Point, coords)
-    return max(corner0.distance(corner1), corner1.distance(corner2))
-
-
 @dataclasses.dataclass
 class GeoCardinal:
     azimuth: int
@@ -42,7 +36,7 @@ class GeoCardinal:
         return result - geometry
 
     def part_of(self, geometry: shapely.geometry.base.BaseGeometry):
-        d = diameter(geometry)
+        d = shapely.minimum_bounding_radius(geometry) * 2
         c = geometry.centroid
         # create point at azimuth 0 (North) and rotate (negative = clockwise)
         point = shapely.Point(c.x, c.y + d)
@@ -106,13 +100,12 @@ class GeoJsonDirReader:
 
 def _diameter_and_start(geometry: shapely.geometry.base.BaseGeometry,
                         distance: float = None) -> (float, float):
-    d = diameter(geometry)
-    radius = d / 2
+    radius = shapely.minimum_bounding_radius(geometry)
     if distance is None:
         start_distance = radius
     else:
         start_distance = max(0.0, distance - radius)
-    return d, start_distance
+    return radius * 2, start_distance
 
 
 def _line_through_centroid_perpendicular_to_point(
@@ -124,7 +117,7 @@ def _line_through_centroid_perpendicular_to_point(
     # rotate the line to be perpendicular
     line = shapely.affinity.rotate(line, angle=90, origin=geometry.centroid)
     # extend the line past the geometry
-    scale = line.length / diameter(geometry)
+    scale = line.length / (shapely.minimum_bounding_radius(geometry) * 2)
     return shapely.affinity.scale(line, xfact=scale, yfact=scale)
 
 

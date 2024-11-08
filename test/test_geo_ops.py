@@ -107,12 +107,13 @@ def test_distance(georeader: GeoJsonDirReader):
     assert Near.to(es).intersection(es).area == 0
 
     # Near with a distance greater than radius + diameter should not overlap
-    assert Near.to(de, distance=1.5*diameter(de)).intersection(de).area == 0
-    assert Near.to(fr, distance=1.5*diameter(fr)).intersection(fr).area == 0
-    assert Near.to(es, distance=1.5*diameter(es)).intersection(es).area == 0
+    radius = shapely.minimum_bounding_radius
+    assert Near.to(de, distance=3*radius(de)).intersection(de).area == 0
+    assert Near.to(fr, distance=3*radius(fr)).intersection(fr).area == 0
+    assert Near.to(es, distance=3*radius(es)).intersection(es).area == 0
 
     # Spain is southwest of Germany, across France
-    fr_diameter = diameter(fr)
+    fr_diameter = 2 * radius(fr)
     assert Near.to(de, distance=fr_diameter).intersection(es).area > 0.0
     assert SouthWest.of(de, distance=fr_diameter).intersection(es).area > 0.0
     assert Near.to(es, distance=fr_diameter).intersection(de).area > 0.0
