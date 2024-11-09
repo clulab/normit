@@ -95,6 +95,11 @@ def test_outer_regions(georeader: GeoJsonDirReader):
     # Louisiana is not adjacent to Arizona
     assert Near.to(az).intersection(la).area == 0.0
 
+    # the Colorado River is not near Albuquerque
+    colorado_river = georeader.read("2718127")
+    albuquerque = georeader.read("171262")
+    assert Near.to(colorado_river).intersection(albuquerque).area == 0
+
 
 def test_distance(georeader: GeoJsonDirReader):
     de = georeader.read("51477")

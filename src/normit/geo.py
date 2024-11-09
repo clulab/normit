@@ -80,15 +80,20 @@ class Near:
         utm_zone = utm.latlon_to_zone_number(lon, lat)
         proj = pyproj.Proj(proj='utm', zone=utm_zone, ellps='WGS84')
         geometry = shapely.ops.transform(proj, geometry)
-        # if no distance is specified, construct a circle of twice the radius
-        radius = shapely.minimum_bounding_radius(geometry)
-        if distance is None:
-            result = geometry.centroid.buffer(radius * 2)
-        # if a distance is specified, construct a ring at that distance
+        # for lines, use a default radius of 1km
+        if geometry.area == 0.0:
+            radius = 1000
+        # for polygons, use the radius of the minimum bounding circle
         else:
-            start_dist = max(0.0, distance.to(UNITS.meter).magnitude - radius)
-            result = (geometry.centroid.buffer(start_dist + radius * 2) -
-                      geometry.centroid.buffer(start_dist))
+            radius = shapely.minimum_bounding_radius(geometry)
+        # if no distance is specified, buffer by one radius
+        if distance is None:
+            result = geometry.buffer(radius)
+        # if a distance is specified, construct a ring-like buffer at a distance
+        else:
+            dist = max(0.0, distance.to(UNITS.meter).magnitude)
+            result = (geometry.buffer(dist + radius) -
+                      geometry.buffer(dist - radius))
         # remove any overlap with the original geometry
         result -= geometry
         # project back to latitude, longitude
