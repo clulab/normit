@@ -114,17 +114,20 @@ class GeoJsonDirReader:
     def __init__(self, root_dir: str):
         self.root_dir = root_dir
 
-    def read(self, osm) -> shapely.geometry.base.BaseGeometry:
-        with open(f"{self.root_dir}/{str(osm)[:2]}/{osm}") as f:
-            collection = shapely.from_geojson(f.read())
-        [geometry] = collection.geoms
-        # recover polygons that were inappropriately stored as MultiLineStrings
-        if isinstance(geometry, shapely.geometry.MultiLineString):
-            parts = shapely.get_parts(geometry)
-            polygons, cuts, dangles, invalid = shapely.polygonize_full(parts)
-            if not cuts and not dangles and not invalid:
-                geometry = shapely.multipolygons(shapely.get_parts(polygons))
-        return geometry
+    def read(self, *osms) -> shapely.geometry.base.BaseGeometry:
+        results = []
+        for osm in osms:
+            with open(f"{self.root_dir}/{str(osm)[:2]}/{osm}") as f:
+                collection = shapely.from_geojson(f.read())
+            [geometry] = collection.geoms
+            # recover polygons that were inappropriately stored as MultiLineStrings
+            if isinstance(geometry, shapely.geometry.MultiLineString):
+                parts = shapely.get_parts(geometry)
+                polygons, cuts, dangles, invalid = shapely.polygonize_full(parts)
+                if not cuts and not dangles and not invalid:
+                    geometry = shapely.multipolygons(shapely.get_parts(polygons))
+            results.append(geometry)
+        return results[0] if len(results) == 1 else shapely.union_all(results)
 
 
 def _line_through_centroid_perpendicular_to_point(
