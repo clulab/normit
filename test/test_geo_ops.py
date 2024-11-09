@@ -2,10 +2,10 @@ from normit.geo import *
 
 
 def test_inner_regions(georeader: GeoJsonDirReader):
-    india = georeader.read("304716")
-    delhi = georeader.read("1942586")
-    hyderabad = georeader.read("7868535")
-    gorakhpur = georeader.read("1959872")
+    india = georeader.read(304716)
+    delhi = georeader.read(1942586)
+    hyderabad = georeader.read(7868535)
+    gorakhpur = georeader.read(1959872)
 
     # Delhi is in the North of India
     assert North.part_of(india).intersection(delhi).area > 0
@@ -21,14 +21,14 @@ def test_inner_regions(georeader: GeoJsonDirReader):
 
 
 def test_outer_regions(georeader: GeoJsonDirReader):
-    az = georeader.read("162018")
-    ca = georeader.read("165475")
-    co = georeader.read("161961")
-    la = georeader.read("224922")
-    mx = georeader.read("114686")
-    nm = georeader.read("162014")
-    nv = georeader.read("165473")
-    ut = georeader.read("161993")
+    az = georeader.read(162018)
+    ca = georeader.read(165475)
+    co = georeader.read(161961)
+    la = georeader.read(224922)
+    mx = georeader.read(114686)
+    nm = georeader.read(162014)
+    nv = georeader.read(165473)
+    ut = georeader.read(161993)
 
     assert Near.to(az).intersection(nm).area > 0.0
 
@@ -96,15 +96,15 @@ def test_outer_regions(georeader: GeoJsonDirReader):
     assert Near.to(az).intersection(la).area == 0.0
 
     # the Colorado River is not near Albuquerque
-    colorado_river = georeader.read("2718127")
-    albuquerque = georeader.read("171262")
+    colorado_river = georeader.read(2718127)
+    albuquerque = georeader.read(171262)
     assert Near.to(colorado_river).intersection(albuquerque).area == 0
 
 
 def test_distance(georeader: GeoJsonDirReader):
-    de = georeader.read("51477")
-    fr = georeader.read("1403916")  # "Metropolitan France" not the territories
-    es = georeader.read("1311341")
+    de = georeader.read(51477)
+    fr = georeader.read(1403916)  # "Metropolitan France" not the territories
+    es = georeader.read(1311341)
 
     # Near should not overlap the original polygon
     assert Near.to(de).intersection(de).area == 0
@@ -125,10 +125,10 @@ def test_distance(georeader: GeoJsonDirReader):
 
 
 def test_between(georeader: GeoJsonDirReader):
-    na = georeader.read("195266")  # Namibia
-    bw = georeader.read("1889339")  # Botswana
-    zw = georeader.read("195272")  # Zimbabwe
-    za = georeader.read("87565")  # South Africa
+    na = georeader.read(195266)  # Namibia
+    bw = georeader.read(1889339)  # Botswana
+    zw = georeader.read(195272)  # Zimbabwe
+    za = georeader.read(87565)  # South Africa
 
     # Botswana is between Namibia and Zimbabwe
     assert Between.of(na, zw).intersection(bw).area > 0
