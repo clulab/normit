@@ -18,7 +18,8 @@ def _dataclass(cls):
                   and getattr(self, f.name) != f.default
                   and (f.default_factory is dataclasses.MISSING
                        or getattr(self, f.name) != f.default_factory())]
-        field_str = ', '.join([f"{f.name}={getattr(self, f.name)!r}" for f in fields])
+        field_str = ', '.join([f"{f.name}={getattr(self, f.name)!r}"
+                               for f in fields])
         return f"{self.__class__.__qualname__}({field_str})"
 
     cls.__repr__ = __repr__
@@ -28,13 +29,16 @@ def _dataclass(cls):
 @dataclasses.dataclass
 class Interval:
     """
-    An interval on the timeline, defined by a starting point (inclusive) and an ending point (exclusive).
-    For example, the expression "1990", interpreted as the entire year on the timeline, would be represented as::
+    An interval on the timeline, defined by a starting point (inclusive) and an
+    ending point (exclusive).
+    For example, the expression "1990", interpreted as the entire year on the
+    timeline, would be represented as::
 
         Interval(start=datetime.datetime.fromisoformat("1990-01-01T00:00:00"),
                  end=datetime.datetime.fromisoformat("1991-01-01T00:00:00"))
 
-    See the :func:`fromisoformat` and :func:`of` methods for more concise ways of constructing Intervals.
+    See the :func:`fromisoformat` and :func:`of` methods for more concise ways
+    of constructing Intervals.
     """
     start: datetime.datetime | None
     end: datetime.datetime | None
@@ -47,15 +51,18 @@ class Interval:
 
             Interval.fromisoformat("1362-03-01T00:00:00 1362-04-01T00:00:00")
 
-        The supported formats are the same as :func:`datetime.datetime.fromisoformat`, so "May 1362" may be more
+        The supported formats are the same as
+        :func:`datetime.datetime.fromisoformat`, so "May 1362" may be more
         concisely written as::
 
             Interval.fromisoformat("1362-03-01 1362-04-01")
 
-        :param string: A string containing a starting point and an ending point in ISO 8601 format.
+        :param string: A string containing a starting point and an ending point
+        in ISO 8601 format.
         :return: An Interval from the starting point to the ending point.
         """
-        start, end = [datetime.datetime.fromisoformat(x) for x in string.split()]
+        isoformats = string.split()
+        start, end = [datetime.datetime.fromisoformat(x) for x in isoformats]
         return cls(start, end)
 
     @classmethod
@@ -70,14 +77,17 @@ class Interval:
 
             Interval.of(1998, 4, 1)
 
-        :param args: A starting point specified by any prefix of the list of time units:
-        year, month, day, hour, minute, second, and microsecond.
-        :return: An Interval that starts from the given starting point, and ends after the smallest time unit specified.
+        :param args: A starting point specified by any prefix of the list of
+        time units: year, month, day, hour, minute, second, and microsecond.
+        :return: An Interval that starts from the given starting point, and ends
+        after the smallest time unit specified.
         """
         # match Interval.of arguments with datetime.__init__ arguments
-        names = ["year", "month", "day", "hour", "minute", "second", "microsecond"]
+        names = ["year", "month", "day",
+                 "hour", "minute", "second", "microsecond"]
         if len(args) > len(names):
-            raise ValueError(f"found {len(args)} arguments, {args!r}, for only {len(names)} time units, {names!r}")
+            raise ValueError(f"found {len(args)} arguments, {args!r}, for only "
+                             f"{len(names)} time units, {names!r}")
         pairs = list(zip(names, args))
         kwargs = dict(pairs)
         # month and day are required by datetime, so give defaults here
@@ -118,9 +128,12 @@ class Interval:
         else:
             tuple_index = None
         if tuple_index is not None:
-            return f"Interval.of({', '.join(map(repr, self.start.timetuple()[:tuple_index]))})"
+            tup = self.start.timetuple()[:tuple_index]
+            return f"Interval.of({', '.join(map(repr, tup))})"
         else:
-            return f"Interval.fromisoformat('{self.start.isoformat()} {self.end.isoformat()}')"
+            start = self.start.isoformat()
+            end = self.end.isoformat()
+            return f"Interval.fromisoformat('{start} {end}')"
 
     def __len__(self):
         return 2
@@ -177,39 +190,41 @@ class Unit(enum.Enum):
         elif self is Unit.WEEK:
             timetuple = dt.timetuple()
             diff = timetuple.tm_yday - timetuple.tm_wday
-            week_start = datetime.date.fromordinal(diff if diff >= 1 else diff + 7)
-            dt = datetime.datetime(dt.year, week_start.month, week_start.day, 0, 0)
+            ordinal = diff if diff >= 1 else diff + 7
+            week_start = datetime.date.fromordinal(ordinal)
+            dt = datetime.datetime(dt.year, week_start.month, week_start.day)
             if diff < 1:
                 dt = dt + dateutil.relativedelta.relativedelta(days=-7)
         elif self is Unit.MONTH:
-            dt = datetime.datetime(dt.year, dt.month, 1, 0, 0)
+            dt = datetime.datetime(dt.year, dt.month, 1)
         elif self is Unit.QUARTER_YEAR:
-            dt = datetime.datetime(dt.year, (dt.month - 1) // 3 * 3 + 1, 1, 0, 0)
+            dt = datetime.datetime(dt.year, (dt.month - 1) // 3 * 3 + 1, 1)
         elif self is Unit.YEAR:
-            dt = datetime.datetime(dt.year, 1, 1, 0, 0)
+            dt = datetime.datetime(dt.year, 1, 1)
         elif self is Unit.DECADE:
-            dt = datetime.datetime(dt.year // 10 * 10, 1, 1, 0, 0)
+            dt = datetime.datetime(dt.year // 10 * 10, 1, 1)
         elif self is Unit.QUARTER_CENTURY:
-            dt = datetime.datetime(dt.year // 25 * 25, 1, 1, 0, 0)
+            dt = datetime.datetime(dt.year // 25 * 25, 1, 1)
         elif self is Unit.CENTURY:
             year = dt.year // 100 * 100
             year = 1 if year == 0 else year  # year 0 does not exist
-            dt = datetime.datetime(year, 1, 1, 0, 0)
+            dt = datetime.datetime(year, 1, 1)
         return dt
 
     def relativedelta(self, n) -> dateutil.relativedelta.relativedelta:
         if self._relativedelta_name is not None:
-            return dateutil.relativedelta.relativedelta(**{self._relativedelta_name: n})
+            kwargs = {self._relativedelta_name: n}
         elif self is Unit.CENTURY:
-            return dateutil.relativedelta.relativedelta(**{Unit.YEAR._relativedelta_name: 100 * n})
+            kwargs = {Unit.YEAR._relativedelta_name: 100 * n}
         elif self is Unit.QUARTER_CENTURY:
-            return dateutil.relativedelta.relativedelta(**{Unit.YEAR._relativedelta_name: 25 * n})
+            kwargs = {Unit.YEAR._relativedelta_name: 25 * n}
         elif self is Unit.DECADE:
-            return dateutil.relativedelta.relativedelta(**{Unit.YEAR._relativedelta_name: 10 * n})
+            kwargs = {Unit.YEAR._relativedelta_name: 10 * n}
         elif self is Unit.QUARTER_YEAR:
-            return dateutil.relativedelta.relativedelta(**{Unit.MONTH._relativedelta_name: 3 * n})
+            kwargs = {Unit.MONTH._relativedelta_name: 3 * n}
         else:
             raise NotImplementedError
+        return dateutil.relativedelta.relativedelta(**kwargs)
 
     def expand(self, interval: Interval, n: int = 1) -> Interval:
         if interval.start + self.relativedelta(n) > interval.end:
@@ -227,7 +242,8 @@ class Unit(enum.Enum):
             elif self is Unit.YEAR:
                 half = Unit.DAY.relativedelta(365 / 2)
             else:
-                raise NotImplementedError(f"don't know how to take {n}/2 {self}")
+                raise NotImplementedError(f"don't know how to take {n}/2 "
+                                          f"of {self}")
             start = mid - half
             interval = Interval(start, start + self.relativedelta(n))
         return interval
@@ -239,7 +255,8 @@ globals().update(Unit.__members__)
 
 class Shift:
     """
-    An object that can be added or subtracted from a time point yielding an Interval
+    An object that can be added or subtracted from a time point yielding an
+    Interval
     """
 
     unit: Unit
@@ -259,8 +276,9 @@ class Period(Shift):
 
         Period(MONTH, 3)
 
-    Note that periods are independent of the timeline. For example, given only the period expression "10 weeks", it is
-    impossible to assign time points of the form XXXX-XX-XXTXX:XX:XX to its start and end.
+    Note that periods are independent of the timeline. For example, given only
+    the period expression "10 weeks", it is impossible to assign time points of
+    the form XXXX-XX-XXTXX:XX:XX to its start and end.
     """
     unit: Unit
     n: int | None
@@ -313,8 +331,10 @@ class PeriodSum(Shift):
 @_dataclass
 class Repeating(Shift):
     """
-    A Repeating identifies intervals that are named by the calendar system and repeat along the timeline.
-    For example, the set of all months of year "February" would be represented as::
+    A Repeating identifies intervals that are named by the calendar system and
+    repeat along the timeline.
+    For example, the set of all months of year "February" would be represented
+    as::
 
         Repeating(MONTH, YEAR, value=2)
 
@@ -322,7 +342,8 @@ class Repeating(Shift):
 
         Repeating(DAY)
 
-    Note that for days of the week, the value follows dateutil in assigning Monday as 0, Tuesday as 1, etc.
+    Note that for days of the week, the value follows dateutil in assigning
+    Monday as 0, Tuesday as 1, etc.
     So the set of all days of the week "Thursday" would be represented as::
 
         Repeating(DAY, WEEK, value=3)
@@ -331,7 +352,8 @@ class Repeating(Shift):
     range: Unit = None
     value: int = dataclasses.field(default=None, kw_only=True)
     n_units: int = dataclasses.field(default=1, kw_only=True)
-    rrule_kwargs: dict = dataclasses.field(default_factory=dict, kw_only=True, repr=False)
+    rrule_kwargs: dict = dataclasses.field(default_factory=dict,
+                                           kw_only=True, repr=False)
     span: (int, int) = dataclasses.field(default=None, repr=False)
 
     def __post_init__(self):
@@ -341,7 +363,8 @@ class Repeating(Shift):
         elif self.range is None:
             self.range = self.unit
         elif self.value is None:
-            raise ValueError(f"value=None is not allowed for unit={self.unit} and range={self.range}")
+            raise ValueError(f"value=None is not allowed for unit={self.unit} "
+                             f"and range={self.range}")
         else:
             match self.range:
                 case Unit.SECOND:
@@ -388,12 +411,15 @@ class Repeating(Shift):
             return Interval(None, None)
         other = self.unit.truncate(other)
         if self.rrule_kwargs:
-            # HACK: rrule requires a starting point even when going backwards so use a big one
+            # HACK: rrule requires a starting point even when going backwards
+            # so use a big one
             dtstart = other - Unit.YEAR.relativedelta(100)
             min_end = other - self.period.unit.relativedelta(self.period.n)
-            start = dateutil.rrule.rrule(dtstart=dtstart, **self.rrule_kwargs).before(min_end, inc=True)
+            rrule = dateutil.rrule.rrule(dtstart=dtstart, **self.rrule_kwargs)
+            start = rrule.before(min_end, inc=True)
             if start is None:
-                raise ValueError(f"between {dtstart} and {min_end} there is no {self.rrule_kwargs}")
+                raise ValueError(f"between {dtstart} and {min_end} there is "
+                                 f"no {self.rrule_kwargs}")
             interval = start + self.period
         else:
             interval = other - self.period
@@ -404,7 +430,8 @@ class Repeating(Shift):
             return Interval(None, None)
         start = self.unit.truncate(other)
         if self.rrule_kwargs:
-            start = dateutil.rrule.rrule(dtstart=start, **self.rrule_kwargs).after(other, inc=True)
+            rrule = dateutil.rrule.rrule(dtstart=start, **self.rrule_kwargs)
+            start = rrule.after(other, inc=True)
         elif start < other:
             start += self.period.unit.relativedelta(1)
         return start + self.period
@@ -415,7 +442,8 @@ class Repeating(Shift):
 @_dataclass
 class Spring(Repeating):
     """
-    The repeating interval for meteorological springs in the Northern Hemisphere, i.e., March, April, and May
+    The repeating interval for meteorological springs in the Northern
+    Hemisphere, i.e., March, April, and May
     """
     unit: Unit = Unit.MONTH
     range: Unit = Unit.YEAR
@@ -426,7 +454,8 @@ class Spring(Repeating):
 @_dataclass
 class Summer(Repeating):
     """
-    The repeating interval for meteorological summers in the Northern Hemisphere, i.e., June, July, and August
+    The repeating interval for meteorological summers in the Northern
+    Hemisphere, i.e., June, July, and August
     """
     unit: Unit = Unit.MONTH
     range: Unit = Unit.YEAR
@@ -437,7 +466,8 @@ class Summer(Repeating):
 @_dataclass
 class Fall(Repeating):
     """
-    The repeating interval for meteorological falls in the Northern Hemisphere, i.e., September, October, and November
+    The repeating interval for meteorological falls in the Northern Hemisphere,
+    i.e., September, October, and November
     """
     unit: Unit = Unit.MONTH
     range: Unit = Unit.YEAR
@@ -448,7 +478,8 @@ class Fall(Repeating):
 @_dataclass
 class Winter(Repeating):
     """
-    The repeating interval for meteorological winters in the Northern Hemisphere, i.e., December, January, and February
+    The repeating interval for meteorological winters in the Northern
+    Hemisphere, i.e., December, January, and February
     """
     unit: Unit = Unit.MONTH
     range: Unit = Unit.YEAR
@@ -487,13 +518,15 @@ class Noon(Repeating):
     """
     unit: Unit = Unit.MINUTE
     rrule_kwargs: dict = dataclasses.field(
-        default_factory=lambda: dict(freq=dateutil.rrule.DAILY, byhour=12, byminute=0))
+        default_factory=lambda: dict(freq=dateutil.rrule.DAILY,
+                                     byhour=12, byminute=0))
 
 
 @_dataclass
 class Afternoon(Repeating):
     """
-    The repeating interval for meteorological afternoons, i.e., 12:00 until 18:00
+    The repeating interval for meteorological afternoons, i.e.,
+    12:00 until 18:00
     """
     unit: Unit = Unit.HOUR
     range: Unit = Unit.DAY
@@ -541,13 +574,15 @@ class Midnight(Repeating):
     """
     unit: Unit = Unit.MINUTE
     rrule_kwargs: dict = dataclasses.field(
-        default_factory=lambda: dict(freq=dateutil.rrule.DAILY, byhour=0, byminute=0))
+        default_factory=lambda: dict(freq=dateutil.rrule.DAILY,
+                                     byhour=0, byminute=0))
 
 
 @_dataclass
 class EveryNth(Shift):
     """
-    A repeating interval that retains only every nth interval of another repeating interval.
+    A repeating interval that retains only every nth interval of another
+    repeating interval.
     For example, "every other Friday" would be represented as::
 
         EveryNth(Repeating(DAY, WEEK, value=4), n=2)
@@ -573,9 +608,11 @@ class EveryNth(Shift):
 class ShiftUnion(Shift):
     """
     The union of two or more time shifts (periods, repeating intervals, etc.).
-    For example, the set of all days of the week "Mondays and Fridays" would be represented as::
+    For example, the set of all days of the week "Mondays and Fridays" would be
+    represented as::
 
-        ShiftUnion([Repeating(DAY, WEEK, value=0), Repeating(DAY, WEEK, value=4)])
+        ShiftUnion([Repeating(DAY, WEEK, value=0),
+                    Repeating(DAY, WEEK, value=4)])
     """
     shifts: typing.Iterable[Shift]
     span: (int, int) = dataclasses.field(default=None, repr=False)
@@ -596,10 +633,12 @@ class ShiftUnion(Shift):
 @_dataclass
 class RepeatingIntersection(Shift):
     """
-    A repeating interval that is the intersection of two or more repeating intervals.
+    A repeating interval that is the intersection of two or more repeating
+    intervals.
     For example, "Saturdays in March" would be represented as::
 
-        RepeatingIntersection([Repeating(DAY, WEEK, value=5), Repeating(MONTH, YEAR, value=3)])
+        RepeatingIntersection([Repeating(DAY, WEEK, value=5),
+                               Repeating(MONTH, YEAR, value=3)])
     """
     shifts: typing.Iterable[Repeating]
     span: (int, int) = dataclasses.field(default=None, repr=False)
@@ -615,7 +654,8 @@ class RepeatingIntersection(Shift):
 
     def __post_init__(self):
         if not self.shifts:
-            raise ValueError(f"{self.__class__.__name__} shifts cannot be empty")
+            cls_name = self.__class__.__name__
+            raise ValueError(f"{cls_name} shifts cannot be empty")
         self.rrule_kwargs = {}
         periods = []
         rrule_periods = []
@@ -629,10 +669,12 @@ class RepeatingIntersection(Shift):
                 non_rrule_periods.append(shift.period)
 
         def by_unit(period: Period) -> Unit:
-            return period.unit._n if period.unit is not None else 0  # smaller than all units
+            # note that 0 is smaller than all Unit._n values
+            return period.unit._n if period.unit is not None else 0
         self.min_period = min(periods, default=None, key=by_unit)
         self.rrule_period = min(rrule_periods, default=None, key=by_unit)
-        self.non_rrule_period = min(non_rrule_periods, default=None, key=by_unit)
+        self.non_rrule_period = min(non_rrule_periods, default=None,
+                                    key=by_unit)
         self.unit = self.min_period.unit
         self.range = max(periods, default=None, key=by_unit).unit
 
@@ -646,9 +688,12 @@ class RepeatingIntersection(Shift):
             dtstart = start - Unit.YEAR.relativedelta(100)
             while True:
                 # find the start and interval using the rrule
-                start = dateutil.rrule.rrule(dtstart=dtstart, **self.rrule_kwargs).before(start, inc=True)
+                rrule = dateutil.rrule.rrule(dtstart=dtstart,
+                                             **self.rrule_kwargs)
+                start = rrule.before(start, inc=True)
                 if start is None:
-                    raise ValueError(f"no {self.rrule_kwargs} between {dtstart} and {start}")
+                    raise ValueError(f"no {self.rrule_kwargs} between "
+                                     f"{dtstart} and {start}")
                 interval = start + self.rrule_period
 
                 # subtract off any non-rrule period
@@ -657,18 +702,20 @@ class RepeatingIntersection(Shift):
 
                     # if outside the valid range of the rrule, move back in
                     if interval.start < self.rrule_period.unit.truncate(start):
+                        delta = self.rrule_period.unit.relativedelta
                         interval = Interval(
-                            interval.start + self.rrule_period.unit.relativedelta(self.rrule_period.n),
-                            interval.end + self.rrule_period.unit.relativedelta(self.rrule_period.n))
+                            interval.start + delta(self.rrule_period.n),
+                            interval.end + delta(self.rrule_period.n))
 
-                # start is guaranteed to be before other by rrule, but end is not
+                # start is guaranteed to be before other by rrule; end is not
                 if interval.end <= other:
                     break
                 start -= Unit.MICROSECOND.relativedelta(1)
         elif self.non_rrule_period is not None:
             interval = start - self.non_rrule_period
         else:
-            raise ValueError(f"{self.rrule_period} and {self.non_rrule_period} are both None")
+            raise ValueError(f"{self.rrule_period} and {self.non_rrule_period} "
+                             f"are both None")
         return interval
 
     def __radd__(self, other: datetime.datetime) -> Interval:
@@ -678,21 +725,29 @@ class RepeatingIntersection(Shift):
         if start < other:
             start += self.min_period.unit.relativedelta(self.min_period.n)
         if self.rrule_period is not None:
-            start = dateutil.rrule.rrule(dtstart=start, **self.rrule_kwargs).after(start, inc=True)
+            rrule = dateutil.rrule.rrule(dtstart=start, **self.rrule_kwargs)
+            start = rrule.after(start, inc=True)
             if start is None:
-                raise ValueError(f"no {self.rrule_kwargs} between {start} and {other}")
+                raise ValueError(f"no {self.rrule_kwargs} between "
+                                 f"{start} and {other}")
         return start + self.min_period
+
+
+_RepeatingLike = Repeating | ShiftUnion | RepeatingIntersection
+_PeriodLike = Period | PeriodSum
 
 
 @_dataclass
 class Year(Interval):
     """
-    The interval from the first second of a year (inclusive) to the first second of the next year (exclusive).
+    The interval from the first second of a year (inclusive) to the first second
+    of the next year (exclusive).
     For example, the year-long interval "2014" would be represented as::
 
         Year(2014)
 
-    Year can also be used to identify decades and centuries by indicating how many digits are missing.
+    Year can also be used to identify decades and centuries by indicating how
+    many digits are missing.
     For example, the 10-year-long interval "the 1980s" would be represented as::
 
         Year(198, n_missing_digits=1)
@@ -705,20 +760,26 @@ class Year(Interval):
 
     def __post_init__(self):
         duration_in_years = 10 ** self.n_missing_digits
-        self.start = datetime.datetime(year=self.digits * duration_in_years, month=1, day=1)
-        self.end = self.start + dateutil.relativedelta.relativedelta(years=duration_in_years)
+        year = self.digits * duration_in_years
+        self.start = datetime.datetime(year=year, month=1, day=1)
+        delta = dateutil.relativedelta.relativedelta(years=duration_in_years)
+        self.end = self.start + delta
 
 
 @_dataclass
 class YearSuffix(Interval):
     """
-    A year-long interval created from the year of another interval and a suffix of digits to replace in that year.
-    For example, the year "96" in the context of a document written in 1993 would be represented as::
+    A year-long interval created from the year of another interval and a suffix
+    of digits to replace in that year.
+    For example, the year "96" in the context of a document written in 1993
+    would be represented as::
 
         YearSuffix(Year(1993), last_digits=96)
 
-    YearSuffix can also be used to modify decades and centuries by indicating how many digits are missing.
-    For example, the 10-year-long interval "the 70s" in the context of a document written in 1864 be represented as::
+    YearSuffix can also be used to modify decades and centuries by indicating
+    how many digits are missing.
+    For example, the 10-year-long interval "the 70s" in the context of a
+    document written in 1864 be represented as::
 
         YearSuffix(Year(1864), 7, n_missing_digits=1)
     """
@@ -740,7 +801,8 @@ class YearSuffix(Interval):
 @_dataclass
 class _IntervalOp(Interval):
     """
-    A base class for operators that take in an Interval and a Shift and produce an Interval.
+    A base class for operators that take in an Interval and a Shift and produce
+    an Interval.
     """
     interval: Interval
     shift: Shift
@@ -752,20 +814,26 @@ class _IntervalOp(Interval):
 class Last(_IntervalOp):
     """
     The closest preceding interval matching the specified Shift.
-    For example, "over the past four days" when spoken on 1 Nov 2024 would be represented as::
+    For example, "over the past four days" when spoken on 1 Nov 2024 would be
+    represented as::
 
         Last(Interval.of(2024, 11, 1), Period(DAY, 4))
 
-    Similarly, "the previous summer" when spoken on 14 Feb 1912 would be represented as::
+    Similarly, "the previous summer" when spoken on 14 Feb 1912 would be
+    represented as::
 
         Last(Interval.of(1912, 2, 14), Summer())
 
-    By default, the resulting interval must end by the start of the input interval, but :code:`interval_included=True`
-    will allow the resulting interval to end as late as the end of the input interval.
-    For example, if text written on Tue 8 Nov 2016 wrote "arrived on Tuesday" with the intention of "arrived today"
-    (a common practice in news articles), it would be represented as::
+    By default, the resulting interval must end by the start of the input
+    interval, but :code:`interval_included=True` will allow the resulting
+    interval to end as late as the end of the input interval.
+    For example, if text written on Tue 8 Nov 2016 wrote "arrived on Tuesday"
+    with the intention of "arrived today" (a common practice in news articles),
+    it would be represented as::
 
-        Last(Interval.of(2016, 11, 8), Repeating(DAY, WEEK, value=1), interval_included=True)
+        Last(Interval.of(2016, 11, 8),
+             Repeating(DAY, WEEK, value=1),
+             interval_included=True)
     """
     interval_included: bool = False
     span: (int, int) = dataclasses.field(default=None, repr=False)
@@ -778,7 +846,10 @@ class Last(_IntervalOp):
             self.start = None
             self.end = self.interval.start
         else:
-            start = self.interval.end if self.interval_included else self.interval.start
+            if self.interval_included:
+                start = self.interval.end
+            else:
+                start = self.interval.start
             self.start, self.end = start - self.shift
 
 
@@ -786,17 +857,19 @@ class Last(_IntervalOp):
 class Next(_IntervalOp):
     """
     The closest following interval matching the specified Shift.
-    For example, "the next three hours" when spoken on 1 Nov 2024 would be represented as::
+    For example, "the next three hours" when spoken on 1 Nov 2024 would be
+    represented as::
 
         Next(Interval.of(2024, 11, 1), Period(HOUR, 3))
 
-    Similarly, "the coming week" when spoken on 14 Feb 1912 would be represented as::
+    Similarly, "the coming week" when spoken on 14 Feb 1912 would be represented
+    as::
 
         Next(Interval.of(1912, 2, 14), Repeating(WEEK))
 
-    By default, the resulting interval must not start before the end of the input interval,
-    but :code:`interval_included=True` will allow the resulting interval to start as early as the start of the input
-    interval.
+    By default, the resulting interval must not start before the end of the
+    input interval, but :code:`interval_included=True` will allow the resulting
+    interval to start as early as the start of the input interval.
     """
     interval_included: bool = False
     span: (int, int) = dataclasses.field(default=None, repr=False)
@@ -811,8 +884,9 @@ class Next(_IntervalOp):
         else:
             if self.interval_included:
                 end = self.interval.start
-                # to allow repeating intervals to start with our start, subtract a tiny amount
-                if isinstance(self.shift, (Repeating, ShiftUnion, RepeatingIntersection)):
+                # to allow repeating intervals to start with our start,
+                # subtract a tiny amount
+                if isinstance(self.shift, _RepeatingLike):
                     end -= Unit.MICROSECOND.relativedelta(1)
             else:
                 end = self.interval.end
@@ -822,18 +896,21 @@ class Next(_IntervalOp):
 @_dataclass
 class Before(_IntervalOp):
     """
-    Moves the input Interval earlier by the specified Shift the specified number of times.
+    Moves the input Interval earlier by the specified Shift the specified number
+    of times.
     For example, "a year ago" written on 13 Sep 1595 would be represented as::
 
         Before(Interval.of(1595, 9, 13), Period(YEAR, 1))
 
-    Similarly, "two Tuesdays before" written on Sat 23 Jan 1993 would be represented as::
+    Similarly, "two Tuesdays before" written on Sat 23 Jan 1993 would be
+    represented as::
 
         Before(Interval.of(1993, 1, 23), Repeating(DAY, WEEK, value=1), n=2)
 
-    By default, the resulting interval must end by the start of the input interval,
-    but when the Shift is a Repeating, :code:`interval_included=True` will allow the resulting interval to end as late
-    as the end of the input interval.
+    By default, the resulting interval must end by the start of the input
+    interval, but when the Shift is a Repeating, :code:`interval_included=True`
+    will allow the resulting interval to end as late as the end of the input
+    interval.
     """
     n: int = 1
     interval_included: bool = False
@@ -843,14 +920,18 @@ class Before(_IntervalOp):
         if not self.interval.is_defined():
             self.start = None
             self.end = None
-        elif isinstance(self.shift, (Repeating, ShiftUnion, RepeatingIntersection)):
-            start = self.interval.end if self.interval_included else self.interval.start
+        elif isinstance(self.shift, _RepeatingLike):
+            if self.interval_included:
+                start = self.interval.end
+            else:
+                start = self.interval.start
             for i in range(self.n - 1):
                 start = (start - self.shift).start
             self.start, self.end = start - self.shift
-        elif isinstance(self.shift, (Period, PeriodSum)):
+        elif isinstance(self.shift, _PeriodLike):
             if self.interval_included:
-                raise ValueError("interval_included=True cannot be used with Periods")
+                raise ValueError("interval_included=True cannot be used "
+                                 "with Periods")
             self.start, self.end = self.interval
             for i in range(self.n):
                 self.start = (self.start - self.shift).start
@@ -865,17 +946,21 @@ class Before(_IntervalOp):
 @_dataclass
 class After(_IntervalOp):
     """
-    Moves the input Interval later by the specified Shift the specified number of times.
-    For example, "a month later" written on 13 Sep 1595 would be represented as::
+    Moves the input Interval later by the specified Shift the specified number
+    of times.
+    For example, "a month later" written on 13 Sep 1595 would be represented
+    as::
 
         After(Interval.of(1595, 9, 13), Period(MONTH, 1))
 
-    Similarly, "three Aprils after" written on Sat 23 Jan 1993 would be represented as::
+    Similarly, "three Aprils after" written on Sat 23 Jan 1993 would be
+    represented as::
 
         After(Interval.of(1993, 1, 23), Repeating(MONTH, YEAR, value=4), n=3)
 
-    By default, the resulting interval must not start before the end of the input interval,
-    but when the Shift is a Repeating, :code:`interval_included=True` will allow the resulting interval to start as
+    By default, the resulting interval must not start before the end of the
+    input interval, but when the Shift is a Repeating,
+    :code:`interval_included=True` will allow the resulting interval to start as
     early as the start of the input interval.
     """
     n: int = 1
@@ -886,16 +971,18 @@ class After(_IntervalOp):
         if not self.interval.is_defined():
             self.start = None
             self.end = None
-        elif isinstance(self.shift, (Repeating, ShiftUnion, RepeatingIntersection)):
-            # to allow repeating intervals to overlap start with our start, subtract a tiny amount
+        elif isinstance(self.shift, _RepeatingLike):
+            # to allow repeating intervals to overlap start with our start,
+            # subtract a tiny amount
             end = self.interval.start - Unit.MICROSECOND.relativedelta(
                 1) if self.interval_included else self.interval.end
             for i in range(self.n - 1):
                 end = (end + self.shift).end
             self.start, self.end = end + self.shift
-        elif isinstance(self.shift, (Period, PeriodSum)):
+        elif isinstance(self.shift, _PeriodLike):
             if self.interval_included:
-                raise ValueError("interval_included=True cannot be used with Periods")
+                raise ValueError("interval_included=True cannot be used "
+                                 "with Periods")
             self.start, self.end = self.interval
             for i in range(self.n):
                 self.start = (self.start + self.shift).end
@@ -911,16 +998,20 @@ class After(_IntervalOp):
 class Nth(_IntervalOp):
     """
     Selects the nth repetition of a Shift starting from one end of the Interval.
-    For example, "second hour of the meeting" for a meeting at 09:30-12:30 on 30 Mar 2007 would be represented as::
+    For example, "second hour of the meeting" for a meeting at 09:30-12:30 on
+    30 Mar 2007 would be represented as::
 
-        Nth(Interval.fromisoformat("2007-03-30T09:30 2007-03-30T12:30"), Period(HOUR, 1), index=2)
+        Nth(Interval.fromisoformat("2007-03-30T09:30 2007-03-30T12:30"),
+            Period(HOUR, 1),
+            index=2)
 
     Similarly, "fiftieth day of 2016" would be represented as::
 
         Nth(Year(2016), Repeating(DAY), index=50)
 
-    By default, Nth will start from the start and count forward in time, but with :code:`from_end=True` Nth will instead
-    start from the end and count backward in time.
+    By default, Nth will start from the start and count forward in time, but
+    with :code:`from_end=True` Nth will instead start from the end and count
+    backward in time.
     For example, "third-to-last Sunday of 2024" would be represented as::
 
         Nth(Year(2024), Repeating(DAY, WEEK, value=6), index=3, from_end=True)
@@ -936,28 +1027,42 @@ class Nth(_IntervalOp):
             self.end = None
         else:
             point = self.interval.end if self.from_end else self.interval.start
-            # to allow repeating intervals to overlap start with our start, subtract a tiny amount
-            if isinstance(self.shift, (Repeating, ShiftUnion, RepeatingIntersection)) \
-                    and not self.from_end and not point == datetime.datetime.min:
+            # to allow repeating intervals to overlap start with our start,
+            # subtract a tiny amount
+            if isinstance(self.shift, _RepeatingLike) \
+                    and not self.from_end \
+                    and not point == datetime.datetime.min:
                 point -= Unit.MICROSECOND.relativedelta(1)
             for i in range(self.index - 1):
-                point = (point - self.shift).start if self.from_end else (point + self.shift).end
-            self.start, self.end = point - self.shift if self.from_end else point + self.shift
-            if (self.start is not None and self.interval.start is not None and self.start < self.interval.start) or \
-                    (self.end is not None and self.interval.end is not None and self.end > self.interval.end):
-                raise ValueError(f"{self.isoformat()} is not within {self.interval.isoformat()}:\n{self}")
+                if self.from_end:
+                    point = (point - self.shift).start
+                else:
+                    point = (point + self.shift).end
+            if self.from_end:
+                interval = point - self.shift
+            else:
+                interval = point + self.shift
+            self.start, self.end = interval
+            if (self.start is not None and self.interval.start is not None and
+                self.start < self.interval.start) or \
+                    (self.end is not None and self.interval.end is not None and
+                     self.end > self.interval.end):
+                raise ValueError(f"{self.isoformat()} is not within "
+                                 f"{self.interval.isoformat()}:\n{self}")
 
 
 @_dataclass
 class This(_IntervalOp):
     """
-    For period Shifts, creates an interval of the given length centered at the given interval.
+    For period Shifts, creates an interval of the given length centered at the
+    given interval.
     For example, "these six days" spoken on 29 Apr 1176 would be interpreted as
     [1176-04-26T12:00:00, 1176-05-02T12:00:00) and represented as::
 
         This(Interval.of(1176, 4, 29), Period(DAY, 6))
 
-    For repeating Shifts, finds the Shift range containing this interval, then finds the Shift unit within that range.
+    For repeating Shifts, finds the Shift range containing this interval, then
+    finds the Shift unit within that range.
     For example, "this January" spoken on 10 Nov 1037 would be interpreted as
     [1037-01-01T00:00:00, 1037-02-01T00:00:00) and represented as::
 
@@ -973,19 +1078,22 @@ class This(_IntervalOp):
         if not self.interval.is_defined() or self.shift is None:
             self.start = None
             self.end = None
-        elif isinstance(self.shift, (Repeating, ShiftUnion, RepeatingIntersection)):
+        elif isinstance(self.shift, _RepeatingLike):
             if self.shift.range is None:
                 self.start = self.end = None
             else:
                 start = self.shift.range.truncate(self.interval.start)
-                self.start, self.end = start - Unit.MICROSECOND.relativedelta(1) + self.shift
+                start -= Unit.MICROSECOND.relativedelta(1)
+                self.start, self.end = start + self.shift
                 if (self.end + self.shift).end < self.interval.end:
-                    raise ValueError(f"there is more than one {self.shift} in {self.interval.isoformat()}")
-        elif isinstance(self.shift, (Period, PeriodSum)):
+                    raise ValueError(f"there is more than one {self.shift} in "
+                                     f"{self.interval.isoformat()}")
+        elif isinstance(self.shift, _PeriodLike):
             if self.shift.unit is None or self.shift.n is None:
                 self.start = self.end = None
             else:
-                self.start, self.end = self.shift.unit.expand(self.interval, self.shift.n)
+                interval = self.shift.unit.expand(self.interval, self.shift.n)
+                self.start, self.end = interval
         else:
             raise NotImplementedError
 
@@ -994,17 +1102,20 @@ class This(_IntervalOp):
 class Between(Interval):
     """
     Selects the interval between a start and an end interval.
-    For example, "since 1994" written on 09 Jan 2007 and interpreted as [1995-01-01T00:00:00, 2007-01-09T00:00:00)
-    would be represented as::
+    For example, "since 1994" written on 09 Jan 2007 and interpreted as
+    [1995-01-01T00:00:00, 2007-01-09T00:00:00) would be represented as::
 
         Between(Year(1994), Interval.of(2007, 1, 9))
 
-    If :code:`start_included=False`, starts from the end of `start_interval`, otherwise, starts from the start.
-    If :code:`end_included=False`, ends at the start of `end_interval`, otherwise ends at the end.
-    So "since 1994" written on 09 Jan 2007 and interpreted as [1994-01-01T00:00:00, 2007-01-10T00:00:00)
-    would be represented as::
+    If :code:`start_included=False`, starts from the end of `start_interval`,
+    otherwise, starts from the start.
+    If :code:`end_included=False`, ends at the start of `end_interval`,
+    otherwise ends at the end.
+    So "since 1994" written on 09 Jan 2007 and interpreted as
+    [1994-01-01T00:00:00, 2007-01-10T00:00:00) would be represented as::
 
-        Between(Year(1994), Interval.of(2007, 1, 9), start_included=True, end_included=True)
+        Between(Year(1994), Interval.of(2007, 1, 9),
+                start_included=True, end_included=True)
     """
     start_interval: Interval
     end_interval: Interval
@@ -1015,26 +1126,35 @@ class Between(Interval):
     span: (int, int) = dataclasses.field(default=None, repr=False)
 
     def __post_init__(self):
-        if not self.start_interval.is_defined() or not self.end_interval.is_defined():
+        if not self.start_interval.is_defined() or \
+                not self.end_interval.is_defined():
             self.start = None
             self.end = None
         else:
-            self.start = self.start_interval.start if self.start_included else self.start_interval.end
-            self.end = self.end_interval.end if self.end_included else self.end_interval.start
+            if self.start_included:
+                self.start = self.start_interval.start
+            else:
+                self.start = self.start_interval.end
+            if self.end_included:
+                self.end = self.end_interval.end
+            else:
+                self.end = self.end_interval.start
             if self.end < self.start:
                 start_iso = self.start_interval.isoformat()
                 end_iso = self.end_interval.isoformat()
-                raise ValueError(f"{start_iso} is not before {end_iso}:\n{self}")
+                raise ValueError(f"{start_iso} is not before {end_iso}")
 
 
 @_dataclass
 class Intersection(Interval):
     """
     Selects the interval in which all given intervals overlap.
-    For example, "Earlier that day" in the context of "We met at 6:00 on 24 Jan 1979. Earlier that day..." would be
-    interpreted as [1979-01-24T00:00:00, 1979-01-24T06:00:00) and represented as::
+    For example, "Earlier that day" in the context of "We met at 6:00 on 24 Jan
+    1979. Earlier that day..." would be interpreted as
+    [1979-01-24T00:00:00, 1979-01-24T06:00:00) and represented as::
 
-        Intersection([Last(Interval.of(1979, 1, 24, 6), None), Interval.of(1979, 1, 24)])
+        Intersection([Last(Interval.of(1979, 1, 24, 6), None),
+                      Interval.of(1979, 1, 24)])
     """
     intervals: typing.Iterable[Interval]
     start: datetime.datetime | None = dataclasses.field(init=False, repr=False)
@@ -1045,10 +1165,14 @@ class Intersection(Interval):
         if any(i.start is None and i.end is None for i in self.intervals):
             self.start = self.end = None
         else:
-            self.start = max((i.start for i in self.intervals if i.start is not None), default=None)
-            self.end = min((i.end for i in self.intervals if i.end is not None), default=None)
-        if self.start is not None and self.end is not None and self.start >= self.end:
-            raise ValueError(f"{self.start.isoformat()} is not before {self.end.isoformat()}")
+            starts = (i.start for i in self.intervals if i.start is not None)
+            ends = (i.end for i in self.intervals if i.end is not None)
+            self.start = max(starts, default=None)
+            self.end = min(ends, default=None)
+        if self.start is not None and self.end is not None and \
+                self.start >= self.end:
+            raise ValueError(f"{self.start.isoformat()} is not before "
+                             f"{self.end.isoformat()}")
 
 
 class Intervals(collections.abc.Iterable[Interval], abc.ABC):
@@ -1062,7 +1186,8 @@ class Intervals(collections.abc.Iterable[Interval], abc.ABC):
 @_dataclass
 class _N(Intervals):
     """
-    A base class for operators that in an Interval, a Shift, and an integer, and produce an Interval.
+    A base class for operators that in an Interval, a Shift, and an integer, and
+    produce an Interval.
     """
     interval: Interval
     shift: Shift
@@ -1090,7 +1215,8 @@ class _N(Intervals):
 class LastN(_N):
     """
     Repeats the `Last` operation n times.
-    For example, "the previous two summers" when written on 29 May 1264 would be represented as::
+    For example, "the previous two summers" when written on 29 May 1264 would be
+    represented as::
 
         LastN(Interval.of(1264, 5, 29), Summer(), n=2)
     """
@@ -1105,7 +1231,8 @@ class LastN(_N):
 class NextN(_N):
     """
     Repeats the `Next` operation n times.
-    For example, "the next six Fridays" when written on Sat 22 Dec 1714 would be represented as::
+    For example, "the next six Fridays" when written on Sat 22 Dec 1714 would be
+    represented as::
 
         NextN(Interval.of(1714, 12, 22), Repeating(DAY, WEEK, value=4), n=6)
     """
@@ -1119,7 +1246,8 @@ class NextN(_N):
 @_dataclass
 class NthN(Intervals):
     """
-    Selects a specified number of nth repetitions of a Shift starting from one end of the Interval.
+    Selects a specified number of nth repetitions of a Shift starting from one
+    end of the Interval.
     For example, "the second six Mondays of 1997" would be represented as::
 
         NthN(Year(1997), Repeating(DAY, WEEK, value=0), index=2, n=6)
@@ -1135,7 +1263,8 @@ class NthN(Intervals):
         n = 2 if self.n is None else self.n
         start = 1 + (self.index - 1) * n
         for index in range(start, start + n):
-            interval = Nth(self.interval, self.shift, index, from_end=self.from_end)
+            interval = Nth(self.interval, self.shift, index,
+                           from_end=self.from_end)
             if self.n is None and index == start + 1:
                 if self.from_end:
                     interval.start = None
@@ -1147,10 +1276,14 @@ class NthN(Intervals):
 @_dataclass
 class These(Intervals):
     """
-    Finds the Shift range containing this interval, then finds the Shift units within that range.
-    For example, "Tuesdays and Thursdays in January 2025" would be represented as::
+    Finds the Shift range containing this interval, then finds the Shift units
+    within that range.
+    For example, "Tuesdays and Thursdays in January 2025" would be represented
+    as::
 
-        These(Interval.of(2025, 1), ShiftUnion([Repeating(DAY, WEEK, value=1), Repeating(DAY, WEEK, value=3)]))
+        These(Interval.of(2025, 1),
+              ShiftUnion([Repeating(DAY, WEEK, value=1),
+                          Repeating(DAY, WEEK, value=3)]))
     """
     interval: Interval
     shift: Shift
@@ -1188,3 +1321,28 @@ class These(Intervals):
                     break
                 yield interval
                 interval = interval.end + self.shift
+
+
+def flatten(shift_or_interval: Shift | Interval) -> Shift | Interval:
+    """
+    Flattens any nested RepeatingIntersection objects.
+
+    :param shift_or_interval: The object to flatten
+    :return: A copy with any nested RepeatingIntersection replaced with a single
+     nested RepeatingIntersection.
+    """
+    match shift_or_interval:
+        case RepeatingIntersection() as ri if any(
+                isinstance(o, RepeatingIntersection) for o in ri.shifts):
+            shifts = []
+            for shift in ri.shifts:
+                shift = flatten(shift)
+                if isinstance(shift, RepeatingIntersection):
+                    shifts.extend(shift.shifts)
+                else:
+                    shifts.append(shift)
+            return dataclasses.replace(ri, shifts=shifts)
+        case op if hasattr(op, "shift"):
+            return dataclasses.replace(op, shift=flatten(op.shift))
+        case _:
+            return shift_or_interval

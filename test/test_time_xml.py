@@ -2,7 +2,7 @@ import datetime
 import inspect
 import xml.etree.ElementTree as ET
 
-import normit.time as scate
+import normit.time.xml as scate
 
 
 def _isoformats(objects: list[scate.Interval | scate.Shift]):

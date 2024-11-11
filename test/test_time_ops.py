@@ -1,4 +1,4 @@
-import normit.time as scate
+import normit.time.ops as scate
 import datetime
 import pytest
 

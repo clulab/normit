@@ -7,14 +7,17 @@ import xml.etree.ElementTree as et
 
 from .ops import *
 
+
 def from_xml(elem: et.Element,
-             known_intervals: dict[(int, int), Interval] = None) -> list[Shift | Interval | Intervals]:
+             known_intervals: dict[(int, int), Interval] = None
+             ) -> list[Shift | Interval | Intervals]:
     """
     Reads Intervals and Shifts from SCATE Anafora XML.
 
     :param elem: The root <data> element of a SCATE Anafora XML document.
-    :param known_intervals: A mapping from character offset spans to Intervals, representing intervals that are already
-    known before parsing begins. The document creation time should be specified with the span (None, None).
+    :param known_intervals: A mapping from character offset spans to Intervals,
+    representing intervals that are already known before parsing begins. The
+    document creation time should be specified with the span (None, None).
     :return: Intervals and Shifts corresponding to the XML definitions.
     """
     if known_intervals is None:
@@ -38,7 +41,8 @@ def from_xml(elem: et.Element,
         entity_id = entity.findtext("id")
         if entity_id in id_to_entity:
             other = id_to_entity[entity_id]
-            raise ValueError(f"duplicate id {entity_id} on {et.tostring(entity)} and {et.tostring(other)}")
+            raise ValueError(f"duplicate id {entity_id} on "
+                             f"{et.tostring(entity)} and {et.tostring(other)}")
         id_to_entity[entity_id] = entity
         id_to_children[entity_id] = set()
         for prop in entity.find("properties"):
@@ -46,7 +50,8 @@ def from_xml(elem: et.Element,
                 id_to_children[entity_id].add(prop.text)
                 id_to_n_parents[prop.text] += 1
 
-    # to avoid infinite loops below, remove non-existent entities (i.e., values that are not keys)
+    # to avoid infinite loops below, remove non-existent entities
+    # (i.e., values that are not keys)
     for key in id_to_children:
         id_to_children[key].intersection_update(id_to_children.keys())
 
@@ -78,18 +83,21 @@ def from_xml(elem: et.Element,
         trigger_span = (min(char_offsets), max(char_offsets))
 
         # helper for managing access to id_to_obj
-        def pop(obj_id: str) -> Interval | Shift | Period | Repeating | Number | AMPM:
+        def pop(obj_id: str) -> \
+                Interval | Shift | Period | Repeating | Number | AMPM:
             result = id_to_obj[obj_id]
             id_to_n_parents[obj_id] -= 1
             if not id_to_n_parents[obj_id]:
                 id_to_obj.pop(obj_id)
-            if result.__class__ is not Interval:  # raw Interval has no span attribute
+            if result.__class__ is not Interval:  # raw Interval has no span
                 spans.append(result.span)
             return result
 
         # helper for ET.findall + text + pop
-        def pop_all_prop(prop_name: str) -> list[Interval | Shift | Period | Repeating | Number | AMPM]:
-            return [pop(e.text) for e in entity.findall(f"properties/{prop_name}") if e.text]
+        def pop_all_prop(prop_name: str) -> \
+                list[Interval | Shift | Period | Repeating | Number | AMPM]:
+            path = f"properties/{prop_name}"
+            return [pop(e.text) for e in entity.findall(path) if e.text]
 
         # helper for managing the multiple interval properties
         def get_interval(prop_name: str) -> Interval:
@@ -114,7 +122,8 @@ def from_xml(elem: et.Element,
 
         # helper for managing the multiple shift properties
         def get_shift() -> Shift:
-            prop_shift = entity.findtext("properties/Period") or entity.findtext("properties/Repeating-Interval")
+            prop_shift = entity.findtext("properties/Period") or \
+                         entity.findtext("properties/Repeating-Interval")
             return pop(prop_shift) if prop_shift else None
 
         # helper for managing Included properties
@@ -154,16 +163,18 @@ def from_xml(elem: et.Element,
                         case "Year":
                             obj = Year(digits, n_missing_digits)
                         case "Two-Digit-Year":
-                            obj = YearSuffix(get_interval("Interval"), digits, n_missing_digits)
+                            obj = YearSuffix(get_interval("Interval"),
+                                             digits, n_missing_digits)
                         case other:
                             raise NotImplementedError(other)
                 case "Month-Of-Year":
-                    month_int = datetime.datetime.strptime(prop_type, '%B').month
-                    obj = Repeating(Unit.MONTH, Unit.YEAR, value=month_int)
+                    dt = datetime.datetime.strptime(prop_type, '%B')
+                    obj = Repeating(Unit.MONTH, Unit.YEAR, value=dt.month)
                 case "Day-Of-Month":
                     obj = Repeating(Unit.DAY, Unit.MONTH, value=int(prop_value))
                 case "Day-Of-Week":
-                    day_int = getattr(dateutil.relativedelta, prop_type.upper()[:2]).weekday
+                    day_str = prop_type.upper()[:2]
+                    day_int = getattr(dateutil.relativedelta, day_str).weekday
                     obj = Repeating(Unit.DAY, Unit.WEEK, value=day_int)
                 case "AMPM-Of-Day":
                     obj = AMPM(prop_type)
@@ -182,10 +193,13 @@ def from_xml(elem: et.Element,
                                 raise NotImplementedError(other)
                     obj = Repeating(Unit.HOUR, Unit.DAY, value=hour)
                 case "Minute-Of-Hour":
-                    obj = Repeating(Unit.MINUTE, Unit.HOUR, value=int(prop_value))
+                    obj = Repeating(Unit.MINUTE, Unit.HOUR,
+                                    value=int(prop_value))
                 case "Second-Of-Minute":
-                    obj = Repeating(Unit.SECOND, Unit.MINUTE, value=int(prop_value))
-                case "Part-Of-Day" | "Season-Of-Year" if prop_type in {"Unknown", "Dawn", "Dusk"}:
+                    obj = Repeating(Unit.SECOND, Unit.MINUTE,
+                                    value=int(prop_value))
+                case "Season-Of-Year" | \
+                     "Part-Of-Day" if prop_type in {"Unknown", "Dawn", "Dusk"}:
                     # TODO: improve handling of location-dependent times
                     obj = Repeating(None)
                 case "Part-Of-Day" | "Part-Of-Week" | "Season-Of-Year":
@@ -197,14 +211,19 @@ def from_xml(elem: et.Element,
                     obj = ShiftUnion(pop_all_prop("Repeating-Intervals"))
                 case "Every-Nth":
                     obj = EveryNth(get_shift(), int(prop_value))
-                case "Last" | "Next" | "Before" | "After" | "NthFromEnd" | "NthFromStart":
-                    cls_name = "Nth" if entity_type.startswith("Nth") else entity_type
+                case "Last" | "Next" | "Before" | "After" | \
+                     "NthFromEnd" | "NthFromStart":
+                    if entity_type.startswith("Nth"):
+                        cls_name = "Nth"
+                    else:
+                        cls_name = entity_type
                     interval = get_interval("Interval")
                     shift = get_shift()
                     kwargs = {}
                     match cls_name:
                         case "Last" | "Next" | "Before" | "After":
-                            kwargs["interval_included"] = get_included("Semantics")
+                            kwargs["interval_included"] = \
+                                get_included("Semantics")
                         case "Nth":
                             kwargs["index"] = int(prop_value)
                             kwargs["from_end"] = entity_type == "NthFromEnd"
@@ -213,7 +232,8 @@ def from_xml(elem: et.Element,
                         if cls_name not in {"Before", "After"}:
                             cls_name += "N"
                         shift = shift.shift
-                    obj = globals()[cls_name](interval=interval, shift=shift, **kwargs)
+                    cls = globals()[cls_name]
+                    obj = cls(interval=interval, shift=shift, **kwargs)
                 case "This":
                     obj = This(get_interval("Interval"), get_shift())
                 case "Between":
@@ -222,7 +242,8 @@ def from_xml(elem: et.Element,
                                   start_included=get_included("Start-Included"),
                                   end_included=get_included("End-Included"))
                 case "Intersection":
-                    match (pop_all_prop("Intervals"), pop_all_prop("Repeating-Intervals")):
+                    match (pop_all_prop("Intervals"),
+                           pop_all_prop("Repeating-Intervals")):
                         case intervals, []:
                             obj = Intersection(intervals)
                         case [], repeating_intervals:
@@ -230,7 +251,8 @@ def from_xml(elem: et.Element,
                         case [interval], [repeating_interval]:
                             obj = This(interval, repeating_interval)
                         case [interval], repeating_intervals:
-                            obj = This(interval, RepeatingIntersection(repeating_intervals))
+                            obj = This(interval, RepeatingIntersection(
+                                repeating_intervals))
                         case other:
                             raise NotImplementedError(other)
                 case "Number":
@@ -249,7 +271,8 @@ def from_xml(elem: et.Element,
                     obj = known_intervals.get(trigger_span)
                     if obj is None:
                         obj = Interval(None, None)
-                case "Time-Zone" | "Modifier" | "Frequency" | "NotNormalizable" | "PreAnnotation":
+                case "Time-Zone" | "Modifier" | "Frequency" | \
+                     "NotNormalizable" | "PreAnnotation":
                     # TODO: handle time zones, modifiers, and frequencies
                     continue
                 case other:
@@ -259,7 +282,7 @@ def from_xml(elem: et.Element,
             obj.span = obj.trigger_span = trigger_span
             spans.append(obj.span)
 
-            # if Number property is present, wrap shift with number for later use
+            # if Number property present, wrap shift with number for later use
             # skip this for Periods, which directly consume their Number above
             if prop_number and not isinstance(obj, Period):
                 repeating_n = pop(prop_number)
@@ -290,7 +313,8 @@ def from_xml(elem: et.Element,
                     case other:
                         raise NotImplementedError(other)
 
-            obj.span = (min(start for start, _ in spans), max(end for _, end in spans))
+            obj.span = (min(start for start, _ in spans),
+                        max(end for _, end in spans))
 
         except Exception as ex:
             raise AnaforaXMLParsingError(entity, trigger_span) from ex
@@ -308,13 +332,14 @@ def from_xml(elem: et.Element,
 
 class AnaforaXMLParsingError(RuntimeError):
     """
-    An exception thrown when `from_xml` is unable to parse a valid Shift, Interval, or Intervals from an Anafora XML
+    An exception thrown when `from_xml` is unable to parse a valid Shift,
+    Interval, or Intervals from an Anafora XML
     """
     def __init__(self, entity: et.Element, trigger_span: (int, int)):
         self.entity = entity
         self.trigger_span = trigger_span
-        super().__init__(re.sub(r"\s+", "", et.tostring(entity, encoding="unicode")))
-
+        xml_str = et.tostring(entity, encoding="unicode")
+        super().__init__(re.sub(r"\s+", "", xml_str))
 
 
 def _main():
@@ -332,7 +357,8 @@ def _main():
     # iterate over the selected Anafora XML paths
     xml_paths = list(pathlib.Path(args.xml_dir).glob(f"**/*{args.xml_suffix}"))
     if not xml_paths:
-        parser.exit(message=f"no such paths: {args.xml_dir}/**/*.{args.xml_suffix}\n")
+        message = f"no such paths: {args.xml_dir}/**/*.{args.xml_suffix}\n"
+        parser.exit(message=message)
     for xml_path in xml_paths:
 
         # load the document creation time, if provided
@@ -340,8 +366,9 @@ def _main():
             dct_name = xml_path.name.replace(args.xml_suffix, ".dct")
             dct_path = pathlib.Path(args.dct_dir) / dct_name
             with open(dct_path) as dct_file:
-                [year_str, month_str, day_str] = dct_file.read().strip().split("-")
-                doc_time = Interval.of(int(year_str), int(month_str), int(day_str))
+                dct_text = dct_file.read().strip()
+                [year, month, day] = map(int, dct_text.strip().split("-"))
+                doc_time = Interval.of(int(year), int(month), int(day))
 
         # use today for the document creation time, if not provided
         else:
@@ -358,7 +385,10 @@ def _main():
                     print(obj)
         except AnaforaXMLParsingError as e:
             text_name = xml_path.name.replace(args.xml_suffix, "")
-            text_dir = pathlib.Path(args.text_dir) if args.text_dir else xml_path.parent
+            if args.text_dir:
+                text_dir = pathlib.Path(args.text_dir)
+            else:
+                text_dir = xml_path.parent
             with open(text_dir / text_name) as text_file:
                 text = text_file.read()
 
@@ -366,8 +396,9 @@ def _main():
             pre_text = text[max(0, start - 100):start]
             post_text = text[end:min(len(text), end + 100)]
             traceback.print_exception(e.__cause__)
-            msg = f"\nContext:\n{pre_text}[[{text[start:end]}]]{post_text}\nXML:\n{e}\nFile:\n{xml_path}\n"
-            print(msg, file=sys.stderr)
+            print(f"\nContext:\n{pre_text}[[{text[start:end]}]]{post_text}"
+                  f"\nXML:\n{e}"
+                  f"\nFile:\n{xml_path}\n", file=sys.stderr)
             n_errors += 1
 
     if n_errors:
