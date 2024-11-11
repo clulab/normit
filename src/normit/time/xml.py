@@ -1,4 +1,8 @@
 import argparse
+import collections
+import dataclasses
+import datetime
+import dateutil.relativedelta
 import pathlib
 import re
 import sys
@@ -6,6 +10,9 @@ import traceback
 import xml.etree.ElementTree as et
 
 from .ops import *
+
+
+__all__ = ['from_xml', 'AnaforaXMLParsingError']
 
 
 def from_xml(elem: et.Element,
@@ -147,7 +154,7 @@ def from_xml(elem: et.Element,
                         unit_name = re.sub(r"IES$", r"Y", unit_name)
                         unit_name = re.sub(r"S$", r"", unit_name)
                         unit_name = re.sub("-", "_", unit_name)
-                        unit = Unit.__members__[unit_name]
+                        unit = globals()[unit_name]
                     if prop_number:
                         n = pop(prop_number).value
                     else:
@@ -169,13 +176,13 @@ def from_xml(elem: et.Element,
                             raise NotImplementedError(other)
                 case "Month-Of-Year":
                     dt = datetime.datetime.strptime(prop_type, '%B')
-                    obj = Repeating(Unit.MONTH, Unit.YEAR, value=dt.month)
+                    obj = Repeating(MONTH, YEAR, value=dt.month)
                 case "Day-Of-Month":
-                    obj = Repeating(Unit.DAY, Unit.MONTH, value=int(prop_value))
+                    obj = Repeating(DAY, MONTH, value=int(prop_value))
                 case "Day-Of-Week":
                     day_str = prop_type.upper()[:2]
                     day_int = getattr(dateutil.relativedelta, day_str).weekday
-                    obj = Repeating(Unit.DAY, Unit.WEEK, value=day_int)
+                    obj = Repeating(DAY, WEEK, value=day_int)
                 case "AMPM-Of-Day":
                     obj = AMPM(prop_type)
                 case "Hour-Of-Day":
@@ -191,13 +198,11 @@ def from_xml(elem: et.Element,
                                 pass
                             case other:
                                 raise NotImplementedError(other)
-                    obj = Repeating(Unit.HOUR, Unit.DAY, value=hour)
+                    obj = Repeating(HOUR, DAY, value=hour)
                 case "Minute-Of-Hour":
-                    obj = Repeating(Unit.MINUTE, Unit.HOUR,
-                                    value=int(prop_value))
+                    obj = Repeating(MINUTE, HOUR, value=int(prop_value))
                 case "Second-Of-Minute":
-                    obj = Repeating(Unit.SECOND, Unit.MINUTE,
-                                    value=int(prop_value))
+                    obj = Repeating(SECOND, MINUTE, value=int(prop_value))
                 case "Season-Of-Year" | \
                      "Part-Of-Day" if prop_type in {"Unknown", "Dawn", "Dusk"}:
                     # TODO: improve handling of location-dependent times
@@ -206,7 +211,7 @@ def from_xml(elem: et.Element,
                     obj = globals()[prop_type]()
                 case "Calendar-Interval":
                     unit_name = prop_type.upper().replace("-", "_")
-                    obj = Repeating(Unit.__members__[unit_name])
+                    obj = Repeating(globals()[unit_name])
                 case "Union":
                     obj = ShiftUnion(pop_all_prop("Repeating-Intervals"))
                 case "Every-Nth":
