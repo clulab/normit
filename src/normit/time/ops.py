@@ -130,10 +130,12 @@ class Interval:
         if tuple_index is not None:
             tup = self.start.timetuple()[:tuple_index]
             return f"Interval.of({', '.join(map(repr, tup))})"
-        else:
+        elif self.start is not None and self.end is not None:
             start = self.start.isoformat()
             end = self.end.isoformat()
             return f"Interval.fromisoformat('{start} {end}')"
+        else:
+            return f"Interval(start={self.start}, end={self.end})"
 
     def __len__(self):
         return 2
