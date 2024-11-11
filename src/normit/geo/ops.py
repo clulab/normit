@@ -1,6 +1,4 @@
 import dataclasses
-import geopandas
-import matplotlib.pyplot as plt
 import pint
 import pyproj
 import pyproj.enums
@@ -10,13 +8,6 @@ import shapely.ops
 import utm
 
 UNITS = pint.UnitRegistry()
-
-
-def show_plot(*geometries: shapely.geometry.base.BaseGeometry):
-    gdf = geopandas.GeoDataFrame(geometry=list(geometries), crs='EPSG:4326')
-    color_list = plt.rcParams['axes.prop_cycle'].by_key()['color']
-    gdf.plot(color=color_list, aspect='equal')
-    plt.show()
 
 
 @dataclasses.dataclass
@@ -108,26 +99,6 @@ class Between:
         chord1 = _chord_perpendicular_to_point(geometry1, geometry2.centroid)
         chord2 = _chord_perpendicular_to_point(geometry2, geometry1.centroid)
         return chord1.union(chord2).convex_hull - geometry1 - geometry2
-
-
-class GeoJsonDirReader:
-    def __init__(self, root_dir: str):
-        self.root_dir = root_dir
-
-    def read(self, *osms) -> shapely.geometry.base.BaseGeometry:
-        results = []
-        for osm in osms:
-            with open(f"{self.root_dir}/{str(osm)[:2]}/{osm}") as f:
-                collection = shapely.from_geojson(f.read())
-            [geometry] = collection.geoms
-            # recover polygons that were inappropriately stored as MultiLineStrings
-            if isinstance(geometry, shapely.geometry.MultiLineString):
-                parts = shapely.get_parts(geometry)
-                polygons, cuts, dangles, invalid = shapely.polygonize_full(parts)
-                if not cuts and not dangles and not invalid:
-                    geometry = shapely.multipolygons(shapely.get_parts(polygons))
-            results.append(geometry)
-        return results[0] if len(results) == 1 else shapely.union_all(results)
 
 
 def _line_through_centroid_perpendicular_to_point(
