@@ -1,5 +1,6 @@
 import normit.geo
 import pytest
+import shapely.geometry.base
 
 
 GEOJSON_OPTION = "--geojson-dir"
@@ -16,3 +17,51 @@ def georeader(request):
         return normit.geo.GeoJsonDirReader(geojson_dir)
     else:
         pytest.skip(f"skipping as no {GEOJSON_OPTION}=DIR was provided")
+
+
+class ScoreLogger:
+    def __init__(self):
+        self.precisions = []
+        self.recalls = []
+        self.f1s = []
+        self.names = []
+
+    def p_r_f1(self,
+               reference: shapely.geometry.base.BaseGeometry,
+               prediction: shapely.geometry.base.BaseGeometry,
+               request):
+        intersection_area = reference.intersection(prediction).area
+        if not prediction.area:
+            precision = 1.0
+        else:
+            precision = intersection_area / prediction.area
+        if not reference.area:
+            recall = 1.0
+        else:
+            recall = intersection_area / reference.area
+        f1 = 2 * precision * recall / (precision + recall)
+        self.precisions.append(precision)
+        self.recalls.append(recall)
+        self.f1s.append(f1)
+        self.names.append(request.function.__name__)
+        return precision, recall, f1
+
+    def log(self):
+        print()
+        for precision, recall, f1, name in zip(self.precisions, self.recalls,
+                                               self.f1s, self.names):
+            print(f"P: {precision:.3f}  R: {recall:.3f}  F1: {f1:.3f}  {name}")
+        precision = sum(self.precisions) / len(self.precisions)
+        recall = sum(self.recalls) / len(self.recalls)
+        f1 = 2 * precision * recall / (precision + recall)
+        print(f"P: {precision:.3f}  R: {recall:.3f}  F1: {f1:.3f}  MEAN")
+
+
+@pytest.fixture(scope='module')
+def score_logger(request):
+    logger = ScoreLogger()
+    yield logger
+    # no capsys workaround: https://github.com/pytest-dev/pytest/issues/2704
+    plugin = request.config.pluginmanager.getplugin("capturemanager")
+    with plugin.global_and_fixture_disabled():
+        logger.log()

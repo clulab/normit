@@ -1,4 +1,5 @@
 import dataclasses
+import math
 import pint
 import pyproj
 import pyproj.enums
@@ -68,23 +69,21 @@ class Near:
         # project to UTM where we can measure distance in meters
         lon = geometry.centroid.x
         lat = geometry.centroid.y
-        utm_zone = utm.latlon_to_zone_number(lon, lat)
-        proj = pyproj.Proj(proj='utm', zone=utm_zone, ellps='WGS84')
+        _, _, number, letter = utm.from_latlon(lat, lon)
+        south = ord(letter) <= ord('M')
+        proj = pyproj.Proj(proj='utm', zone=number, south=south, ellps='WGS84')
         geometry = shapely.ops.transform(proj, geometry)
-        # for lines, use a default radius of 1km
-        if geometry.area == 0.0:
-            radius = 1000
-        # for polygons, use the radius of the minimum bounding circle
-        else:
-            radius = shapely.minimum_bounding_radius(geometry)
+        radius = _radius_by_area(geometry)
         # if no distance is specified, buffer by one radius
         if distance is None:
             result = geometry.buffer(radius)
         # if a distance is specified, construct a ring-like buffer at a distance
+        # buffer to -2/+2 radius because we don't know whether to start from the
+        # center of the polygon or the edge
         else:
             dist = max(0.0, distance.to(UNITS.meter).magnitude)
-            result = (geometry.buffer(dist + radius) -
-                      geometry.buffer(dist - radius))
+            result = (geometry.buffer(dist + 2 * radius) -
+                      geometry.buffer(dist - 2 * radius))
         # remove any overlap with the original geometry
         result -= geometry
         # project back to latitude, longitude
@@ -123,3 +122,24 @@ def _chord_perpendicular_to_point(geometry: shapely.geometry.base.BaseGeometry,
     if isinstance(result, shapely.MultiLineString):
         result = max(result.geoms, key=lambda g: g.length)
     return result
+
+
+def _radius_by_area(geometry: shapely.geometry.base.BaseGeometry):
+    """
+    Calculates the radius of a circle with area equal to the polygon area
+    https://gis.stackexchange.com/questions/20279/calculating-average-width-of-polygon/181801#181801
+
+    :param geometry: The geometry
+    :return: The radius
+    """
+    if geometry.area:
+        perimeter = geometry.boundary.length
+        area = geometry.area
+    # for lines, calculate area assuming a width of 1km = 1000m
+    # p = 2 * l + 2 * w
+    # l = p / 2 - w
+    # a = l * w = p * w / 2 - w * w = p * 500 - 1000000
+    else:
+        perimeter = geometry.length
+        area = perimeter * 500 - 1000000
+    return (perimeter / math.pi) * area / (perimeter ** 2 / (4 * math.pi))
