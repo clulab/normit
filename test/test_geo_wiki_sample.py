@@ -99,7 +99,7 @@ def test_tikehau(georeader: GeoJsonDirReader, score_logger, request):
     # high precision + low recall because constraints are based on Tuamotu
     # Islands, which is the landmass in OSM, while reference is Tikehau, which
     # includes the territorial waters in OSM
-    assert p > .5 and r > 0, plot(tikehau, prediction, prediction_parts)
+    assert p > .9 and r > 0, plot(tikehau, prediction, prediction_parts)
 
 
 def test_gylen_castle(georeader: GeoJsonDirReader, score_logger, request):
