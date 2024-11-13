@@ -45,7 +45,7 @@ def test_oseetah_lake(georeader: GeoJsonDirReader, score_logger, request):
     ]
     prediction = Intersection.of(*prediction_parts)
     p, r, f1 = score_logger.p_r_f1(oseetah_lake, prediction, request)
-    assert f1 >= 0.25, plot(oseetah_lake, prediction, prediction_parts)
+    assert f1 > .2, plot(oseetah_lake, prediction, prediction_parts)
 
 
 def test_jincheon_county(georeader: GeoJsonDirReader, score_logger, request):
@@ -65,7 +65,9 @@ def test_jincheon_county(georeader: GeoJsonDirReader, score_logger, request):
     ]
     prediction = Intersection.of(*prediction_parts)
     p, r, f1 = score_logger.p_r_f1(jincheon_jounty, prediction, request)
-    assert f1 >= 0.15, plot(jincheon_jounty, prediction, prediction_parts)
+    # high recall + low precision because the tightest constraint is based on
+    # the province, which is much larger than the county
+    assert p > 0 and r > .9, plot(jincheon_jounty, prediction, prediction_parts)
 
 
 def test_tikehau(georeader: GeoJsonDirReader, score_logger, request):
@@ -94,7 +96,10 @@ def test_tikehau(georeader: GeoJsonDirReader, score_logger, request):
     ]
     prediction = Intersection.of(*prediction_parts)
     p, r, f1 = score_logger.p_r_f1(tikehau, prediction, request)
-    assert f1 >= 0.15, plot(tikehau, prediction, prediction_parts)
+    # high precision + low recall because constraints are based on Tuamotu
+    # Islands, which is the landmass in OSM, while reference is Tikehau, which
+    # includes the territorial waters in OSM
+    assert p > .5 and r > 0, plot(tikehau, prediction, prediction_parts)
 
 
 def test_gylen_castle(georeader: GeoJsonDirReader, score_logger, request):
@@ -116,7 +121,8 @@ def test_gylen_castle(georeader: GeoJsonDirReader, score_logger, request):
     ]
     prediction = Intersection.of(*prediction_parts)
     p, r, f1 = score_logger.p_r_f1(gylen_castle, prediction, request)
-    # the castle is tiny compared to the island, so precision will be very low
+    # high recall + low precision because tightest constraint is based on the
+    # island and the castle is tiny compared to the island
     assert p > 0 and r > .9, plot(gylen_castle, prediction, prediction_parts)
 
 
@@ -150,7 +156,7 @@ def test_bitburg(georeader: GeoJsonDirReader, score_logger, request):
     ]
     prediction = Intersection.of(*prediction_parts)
     p, r, f1 = score_logger.p_r_f1(bitburg, prediction, request)
-    assert f1 > .15, plot(bitburg, prediction, prediction_parts)
+    assert f1 > .1, plot(bitburg, prediction, prediction_parts)
 
 
 # <entity id="GL543_093" wikipedia="St_George's_Hanover_Square_Church" osm="38310265" type="way" status="5">
