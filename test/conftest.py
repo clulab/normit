@@ -1,6 +1,7 @@
 import normit.geo
 import pytest
 import shapely.geometry.base
+import shapely.ops
 
 
 GEOJSON_OPTION = "--geojson-dir"
@@ -30,6 +31,9 @@ class ScoreLogger:
                reference: shapely.geometry.base.BaseGeometry,
                prediction: shapely.geometry.base.BaseGeometry,
                request):
+        proj = normit.geo.utm_proj(reference)
+        reference = shapely.ops.transform(proj, reference)
+        prediction = shapely.ops.transform(proj, prediction)
         intersection_area = reference.intersection(prediction).area
         if not prediction.area:
             precision = 1.0

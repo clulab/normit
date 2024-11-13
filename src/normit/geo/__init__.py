@@ -4,6 +4,9 @@ import matplotlib.pyplot as plt
 from .ops import *
 
 
+_LineStringLike = shapely.geometry.LineString | shapely.geometry.MultiLineString
+
+
 def show_plot(*geometries: shapely.geometry.base.BaseGeometry):
     gdf = geopandas.GeoDataFrame(geometry=list(geometries), crs='EPSG:4326')
     color_list = plt.rcParams['axes.prop_cycle'].by_key()['color']
@@ -21,8 +24,8 @@ class GeoJsonDirReader:
             with open(f"{self.root_dir}/{str(osm)[:2]}/{osm}") as f:
                 collection = shapely.from_geojson(f.read())
             [geom] = collection.geoms
-            # recover polygons inappropriately stored as MultiLineStrings
-            if isinstance(geom, shapely.geometry.MultiLineString):
+            # recover polygons inappropriately stored as line strings
+            if isinstance(geom, _LineStringLike):
                 polygons, cuts, dangles, invalid = shapely.polygonize_full(
                     shapely.get_parts(geom))
                 if not cuts and not dangles and not invalid:

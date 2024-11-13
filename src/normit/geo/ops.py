@@ -11,6 +11,14 @@ import utm
 UNITS = pint.UnitRegistry()
 
 
+def utm_proj(geometry: shapely.geometry.base.BaseGeometry) -> pyproj.Proj:
+    lon = geometry.centroid.x
+    lat = geometry.centroid.y
+    _, _, number, letter = utm.from_latlon(lat, lon)
+    south = ord(letter) <= ord('M')
+    return pyproj.Proj(proj='utm', zone=number, south=south, ellps='WGS84')
+
+
 @dataclasses.dataclass
 class GeoCardinal:
     azimuth: int
@@ -67,11 +75,7 @@ class Near:
     def to(geometry: shapely.geometry.base.BaseGeometry,
            distance: pint.Quantity = None):
         # project to UTM where we can measure distance in meters
-        lon = geometry.centroid.x
-        lat = geometry.centroid.y
-        _, _, number, letter = utm.from_latlon(lat, lon)
-        south = ord(letter) <= ord('M')
-        proj = pyproj.Proj(proj='utm', zone=number, south=south, ellps='WGS84')
+        proj = utm_proj(geometry)
         geometry = shapely.ops.transform(proj, geometry)
         radius = _radius_by_area(geometry)
         # if no distance is specified, buffer by one radius

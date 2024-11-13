@@ -4,8 +4,8 @@ from normit.geo import *
 
 
 def plot(reference: shapely.geometry.base.BaseGeometry,
+         prediction: shapely.geometry.base.BaseGeometry,
          prediction_parts: list[shapely.geometry.base.BaseGeometry]):
-    prediction = shapely.intersection_all(prediction_parts)
     geometries = [reference, prediction] + prediction_parts
     gdf = geopandas.GeoDataFrame(geometry=geometries, crs='EPSG:4326')
     color_list = plt.rcParams['axes.prop_cycle'].by_key()['color']
@@ -46,7 +46,7 @@ def test_oseetah_lake(georeader: GeoJsonDirReader, score_logger, request):
     ]
     prediction = shapely.intersection_all(prediction_parts)
     p, r, f1 = score_logger.p_r_f1(oseetah_lake, prediction, request)
-    assert f1 >= 0.25, plot(oseetah_lake, prediction_parts)
+    assert f1 >= 0.25, plot(oseetah_lake, prediction, prediction_parts)
 
 
 def test_jincheon_county(georeader: GeoJsonDirReader, score_logger, request):
@@ -66,7 +66,7 @@ def test_jincheon_county(georeader: GeoJsonDirReader, score_logger, request):
     ]
     prediction = shapely.intersection_all(prediction_parts)
     p, r, f1 = score_logger.p_r_f1(jincheon_jounty, prediction, request)
-    assert f1 >= 0.15, plot(jincheon_jounty, prediction_parts)
+    assert f1 >= 0.15, plot(jincheon_jounty, prediction, prediction_parts)
 
 
 def test_tikehau(georeader: GeoJsonDirReader, score_logger, request):
@@ -95,12 +95,32 @@ def test_tikehau(georeader: GeoJsonDirReader, score_logger, request):
     ]
     prediction = shapely.intersection_all(prediction_parts)
     p, r, f1 = score_logger.p_r_f1(tikehau, prediction, request)
-    assert f1 >= 0.15, plot(tikehau, prediction_parts)
+    assert f1 >= 0.15, plot(tikehau, prediction, prediction_parts)
 
 
-# <entity id="GL219_439" wikipedia="Gylen_Castle" osm="275932847" type="way" status="5">
-#       <p id="GL219_439_001" num_links="3">Gylen Castle is a ruined castle, or tower house, at the south end of the island of <link id="GL219_439_001_003" wikipedia="Kerrera" osm="4092586" type="relation">Kerrera</link> in <link id="GL219_439_001_001" wikipedia="Argyll_and_Bute" osm="1775685" type="relation">Argyll and Bute</link>, Scotland, on a promontory overlooking the <link id="GL219_439_001_002" wikipedia="Firth_of_Lorn" osm="4805297529" type="node">Firth of Lorne</link>. It was made a scheduled monument in 1931.[1] </p> </entity>
-#
+def test_gylen_castle(georeader: GeoJsonDirReader, score_logger, request):
+    # Gylen Castle [osm w 275932847]
+    # is a ruined castle, or tower house, at the south end of the island of
+    # Kerrera [osm r 4092586]
+    # in
+    # Argyll and Bute [osm r 1775685],
+    # Scotland, on a promontory overlooking the
+    # Firth of Lorne [osm n 4805297529].
+    # It was made a scheduled monument in 1931.
+    gylen_castle = georeader.read(275932847)
+    kerrera = georeader.read(4092586)
+    argyll_and_bute = georeader.read(1775685)
+
+    prediction_parts = [
+        South.part_of(kerrera),
+        argyll_and_bute
+    ]
+    prediction = shapely.intersection_all(prediction_parts)
+    p, r, f1 = score_logger.p_r_f1(gylen_castle, prediction, request)
+    # the castle is tiny compared to the island, so precision will be very low
+    assert p > 0 and r > .9, plot(gylen_castle, prediction, prediction_parts)
+
+
 # <entity id="GL057_057" wikipedia="Bitburg" osm="27377727 572813" type="node relation" status="5">
 #       <p id="GL057_057_001" num_links="5">Bitburg (German pronunciation: [&#712;b&#618;tb&#650;&#641;k]; French: Bitbourg; Luxembourgish: B&#233;ibreg) is a city in <link id="GL057_057_001_001" wikipedia="Germany" osm="1683325355 51477 62781" type="node relation relation">Germany</link>, in the state of <link id="GL057_057_001_002" wikipedia="Rhineland-Palatinate" osm="519436857 62341" type="node relation">Rhineland-Palatinate</link> approximately 25&#160;km (16&#160;mi.) northwest of <link id="GL057_057_001_003" wikipedia="Trier" osm="31941291 172679" type="node relation">Trier</link> and 50&#160;km (31&#160;mi.) northeast of <link id="GL057_057_001_004" wikipedia="Luxembourg_City" osm="52943358 407489" type="node relation">Luxembourg</link> city. The American <link id="GL057_057_001_005" wikipedia="Spangdahlem_Air_Base" osm="81974947" type="way">Spangdahlem Air Base</link> is nearby. </p> </entity>
 #
