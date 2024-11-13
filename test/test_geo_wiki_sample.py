@@ -8,9 +8,8 @@ def plot(reference: shapely.geometry.base.BaseGeometry,
          prediction_parts: list[shapely.geometry.base.BaseGeometry]):
     geometries = [reference, prediction] + prediction_parts
     gdf = geopandas.GeoDataFrame(geometry=geometries, crs='EPSG:4326')
-    color_list = plt.rcParams['axes.prop_cycle'].by_key()['color']
-    ax = gdf.iloc[2:].plot(color=color_list, aspect='equal', alpha=0.5)
-    gdf.iloc[0:1].plot(ax=ax, facecolor='none', edgecolor='green')
+    ax = gdf.iloc[2:].plot(cmap='tab10', aspect='equal', alpha=0.5)
+    gdf.iloc[0:1].plot(ax=ax, facecolor='none', edgecolor='blue')
     if prediction.area:
         gdf.iloc[1:2].plot(ax=ax, facecolor='none', edgecolor='red')
     plt.show()
@@ -44,7 +43,7 @@ def test_oseetah_lake(georeader: GeoJsonDirReader, score_logger, request):
         South.of(saranac_lake, distance=4 * UNITS.km),
         Near.to(saranac_river),
     ]
-    prediction = shapely.intersection_all(prediction_parts)
+    prediction = Intersection.of(*prediction_parts)
     p, r, f1 = score_logger.p_r_f1(oseetah_lake, prediction, request)
     assert f1 >= 0.25, plot(oseetah_lake, prediction, prediction_parts)
 
@@ -64,7 +63,7 @@ def test_jincheon_county(georeader: GeoJsonDirReader, score_logger, request):
         chungcheongbuk_do,
         Near.to(gyeonggi_do),
     ]
-    prediction = shapely.intersection_all(prediction_parts)
+    prediction = Intersection.of(*prediction_parts)
     p, r, f1 = score_logger.p_r_f1(jincheon_jounty, prediction, request)
     assert f1 >= 0.15, plot(jincheon_jounty, prediction, prediction_parts)
 
@@ -93,7 +92,7 @@ def test_tikehau(georeader: GeoJsonDirReader, score_logger, request):
         West.of(rangiroa, 12 * UNITS.km),
         East.of(mataiva, 35 * UNITS.km),
     ]
-    prediction = shapely.intersection_all(prediction_parts)
+    prediction = Intersection.of(*prediction_parts)
     p, r, f1 = score_logger.p_r_f1(tikehau, prediction, request)
     assert f1 >= 0.15, plot(tikehau, prediction, prediction_parts)
 
@@ -115,15 +114,45 @@ def test_gylen_castle(georeader: GeoJsonDirReader, score_logger, request):
         South.part_of(kerrera),
         argyll_and_bute
     ]
-    prediction = shapely.intersection_all(prediction_parts)
+    prediction = Intersection.of(*prediction_parts)
     p, r, f1 = score_logger.p_r_f1(gylen_castle, prediction, request)
     # the castle is tiny compared to the island, so precision will be very low
     assert p > 0 and r > .9, plot(gylen_castle, prediction, prediction_parts)
 
 
-# <entity id="GL057_057" wikipedia="Bitburg" osm="27377727 572813" type="node relation" status="5">
-#       <p id="GL057_057_001" num_links="5">Bitburg (German pronunciation: [&#712;b&#618;tb&#650;&#641;k]; French: Bitbourg; Luxembourgish: B&#233;ibreg) is a city in <link id="GL057_057_001_001" wikipedia="Germany" osm="1683325355 51477 62781" type="node relation relation">Germany</link>, in the state of <link id="GL057_057_001_002" wikipedia="Rhineland-Palatinate" osm="519436857 62341" type="node relation">Rhineland-Palatinate</link> approximately 25&#160;km (16&#160;mi.) northwest of <link id="GL057_057_001_003" wikipedia="Trier" osm="31941291 172679" type="node relation">Trier</link> and 50&#160;km (31&#160;mi.) northeast of <link id="GL057_057_001_004" wikipedia="Luxembourg_City" osm="52943358 407489" type="node relation">Luxembourg</link> city. The American <link id="GL057_057_001_005" wikipedia="Spangdahlem_Air_Base" osm="81974947" type="way">Spangdahlem Air Base</link> is nearby. </p> </entity>
-#
+def test_bitburg(georeader: GeoJsonDirReader, score_logger, request):
+    # Bitburg [osm n r 27377727 572813]
+    # (German pronunciation: [&#712;b&#618;tb&#650;&#641;k];
+    # French: Bitbourg; Luxembourgish: B&#233;ibreg) is a city in
+    # Germany [osm n r r 1683325355 51477 62781],
+    # in the state of
+    # Rhineland-Palatinate [osm n r 519436857 62341]
+    # approximately 25&#160;km (16&#160;mi.) northwest of
+    # Trier [osm n r 31941291 172679]
+    # and 50&#160;km (31&#160;mi.) northeast of
+    # Luxembourg [osm n r 52943358 407489] city.
+    # The American Spangdahlem Air Base [osm w 81974947] is nearby.
+    bitburg = georeader.read(27377727, 572813)
+    germany = georeader.read(1683325355, 51477, 62781)
+    rhineland_palatinate = georeader.read(519436857, 62341)
+    trier = georeader.read(31941291, 172679)
+    luxembourg_city = georeader.read(52943358, 407489)
+    spangdahlem_air_base = georeader.read(81974947)
+
+    prediction_parts = [
+        germany,
+        rhineland_palatinate,
+        NorthWest.of(trier, distance=25 * UNITS.km),
+        NorthEast.of(luxembourg_city, distance=50 * UNITS.km),
+        # skip the air base because the default size of Near.to is twice the
+        # radius of the base, which will be too small
+        # Near.to(spangdahlem_air_base),
+    ]
+    prediction = Intersection.of(*prediction_parts)
+    p, r, f1 = score_logger.p_r_f1(bitburg, prediction, request)
+    assert f1 > .15, plot(bitburg, prediction, prediction_parts)
+
+
 # <entity id="GL543_093" wikipedia="St_George's_Hanover_Square_Church" osm="38310265" type="way" status="5">
 #       <p id="GL543_093_001" num_links="5">St George's Hanover Square Church is an Anglican church in the <link id="GL543_093_001_001" wikipedia="City_of_Westminster" osm="27365306 51781" type="node relation">City of Westminster</link>, central London, built in the early eighteenth century. The land on which the church stands was donated by General William Steuart, who laid the first stone in 1721. The church was designed by John James and was constructed under a project to build fifty new churches around London (the Queen Anne Churches). The building is one small block south of <link id="GL543_093_001_002" wikipedia="Hanover_Square,_Westminster" osm="38310101" type="way">Hanover Square</link>, near <link id="GL543_093_001_003" wikipedia="Oxford_Street" osm="2354980085" type="node">Oxford Circus</link>, in what is now the <link id="GL543_093_001_004" wikipedia="City_of_Westminster" osm="27365306 51781" type="node relation">City of Westminster</link>. Owing to its <link id="GL543_093_001_005" wikipedia="Mayfair" osm="26745366" type="node">Mayfair</link> location, it has frequently been the venue for high society weddings. </p> </entity>
 #

@@ -104,6 +104,14 @@ class Between:
         return chord1.union(chord2).convex_hull - geometry1 - geometry2
 
 
+class Intersection:
+    @staticmethod
+    def of(*geometries: shapely.geometry.base.BaseGeometry) \
+            -> shapely.geometry.base.BaseGeometry:
+        smallest_first = sorted(geometries, key=lambda g: g.area)
+        return shapely.intersection_all(smallest_first)
+
+
 def _line_through_centroid_perpendicular_to_point(
         geometry: shapely.geometry.base.BaseGeometry,
         point: shapely.Point) -> shapely.LineString:
