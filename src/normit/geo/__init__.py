@@ -1,10 +1,11 @@
 import geopandas
 import matplotlib.pyplot as plt
+import shapely.geometry
 
 from .ops import *
 
 
-_LineStringLike = shapely.geometry.LineString | shapely.geometry.MultiLineString
+_PolygonLike = shapely.geometry.Polygon | shapely.geometry.MultiPolygon
 
 
 def show_plot(*geometries: shapely.geometry.base.BaseGeometry):
@@ -25,12 +26,15 @@ class GeoJsonDirReader:
                 collection = shapely.from_geojson(f.read())
             [geom] = collection.geoms
             # recover polygons inappropriately stored as line strings
-            if isinstance(geom, _LineStringLike):
+            if not isinstance(geom, _PolygonLike):
                 polygons, cuts, dangles, invalid = shapely.polygonize_full(
                     shapely.get_parts(geom))
                 if not cuts and not dangles and not invalid:
                     geom = shapely.multipolygons(shapely.get_parts(polygons))
             results.append(geom)
-        return results[0] if len(results) == 1 else shapely.union_all(results)
-
-
+        # skip the unnecessary union if there's only one result
+        match results:
+            case [geom]:
+                return geom
+            case geoms:
+                return shapely.union_all(geoms)
