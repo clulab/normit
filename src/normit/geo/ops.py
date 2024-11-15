@@ -73,21 +73,26 @@ NorthWest = GeoCardinal(azimuth=315)
 class Near:
     @staticmethod
     def to(geometry: shapely.geometry.base.BaseGeometry,
-           distance: pint.Quantity = None):
+           distance: pint.Quantity = None,
+           radius: pint.Quantity = None):
         # project to UTM where we can measure distance in meters
         proj = utm_proj(geometry)
         geometry = shapely.ops.transform(proj, geometry)
-        radius = _radius_by_area(geometry)
+        # if no radius is specified, infer it from the geometry's area
+        if radius is None:
+            radius_m = _radius_by_area_in_meters(geometry)
+        else:
+            radius_m = radius.to(UNITS.meter).magnitude
         # if no distance is specified, buffer by one radius
         if distance is None:
-            result = geometry.buffer(radius)
+            result = geometry.buffer(radius_m)
         # if a distance is specified, construct a ring-like buffer at a distance
         # buffer to -2/+2 radius because we don't know whether to start from the
         # center of the polygon or the edge
         else:
             dist = max(0.0, distance.to(UNITS.meter).magnitude)
-            result = (geometry.buffer(dist + 2 * radius) -
-                      geometry.buffer(dist - 2 * radius))
+            result = (geometry.buffer(dist + 2 * radius_m) -
+                      geometry.buffer(dist - 2 * radius_m))
         # remove any overlap with the original geometry
         result -= geometry
         # project back to latitude, longitude
@@ -136,7 +141,7 @@ def _chord_perpendicular_to_point(geometry: shapely.geometry.base.BaseGeometry,
     return result
 
 
-def _radius_by_area(geometry: shapely.geometry.base.BaseGeometry):
+def _radius_by_area_in_meters(geometry: shapely.geometry.base.BaseGeometry):
     """
     Calculates the radius of a circle with area equal to the polygon area
     https://gis.stackexchange.com/questions/20279/calculating-average-width-of-polygon/181801#181801

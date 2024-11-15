@@ -150,9 +150,8 @@ def test_bitburg(georeader: GeoJsonDirReader, score_logger, request):
         rhineland_palatinate,
         NorthWest.of(trier, distance=25 * UNITS.km),
         NorthEast.of(luxembourg_city, distance=50 * UNITS.km),
-        # skip the air base because the default size of Near.to is twice the
-        # radius of the base, which will be too small
-        # Near.to(spangdahlem_air_base),
+        # infer a radius of 25km from the context
+        Near.to(spangdahlem_air_base, radius=25 * UNITS.km),
     ]
     prediction = Intersection.of(*prediction_parts)
     p, r, f1 = score_logger.p_r_f1(bitburg, prediction, request)
