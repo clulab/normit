@@ -33,7 +33,7 @@ def test_oseetah_lake(georeader: GeoJsonDirReader, score_logger, request):
     adirondack_park = georeader.read(1695394)
     saranac_lake = georeader.read(158836364, 176209)
     saranac_river = georeader.read(138999640, 138999641, 605606940, 7400653)
-    # skip the node-only geometries, since they're not usable
+    # skip the node-only geometries, since they're not usable as regions
     # harrietstown = georeader.read(158896350)
     # north_elba = georeader.read(158852414)
 
@@ -159,9 +159,43 @@ def test_bitburg(georeader: GeoJsonDirReader, score_logger, request):
     assert f1 > .1, plot(bitburg, prediction, prediction_parts)
 
 
-# <entity id="GL543_093" wikipedia="St_George's_Hanover_Square_Church" osm="38310265" type="way" status="5">
-#       <p id="GL543_093_001" num_links="5">St George's Hanover Square Church is an Anglican church in the <link id="GL543_093_001_001" wikipedia="City_of_Westminster" osm="27365306 51781" type="node relation">City of Westminster</link>, central London, built in the early eighteenth century. The land on which the church stands was donated by General William Steuart, who laid the first stone in 1721. The church was designed by John James and was constructed under a project to build fifty new churches around London (the Queen Anne Churches). The building is one small block south of <link id="GL543_093_001_002" wikipedia="Hanover_Square,_Westminster" osm="38310101" type="way">Hanover Square</link>, near <link id="GL543_093_001_003" wikipedia="Oxford_Street" osm="2354980085" type="node">Oxford Circus</link>, in what is now the <link id="GL543_093_001_004" wikipedia="City_of_Westminster" osm="27365306 51781" type="node relation">City of Westminster</link>. Owing to its <link id="GL543_093_001_005" wikipedia="Mayfair" osm="26745366" type="node">Mayfair</link> location, it has frequently been the venue for high society weddings. </p> </entity>
-#
+def test_st_georges_hanover_square_church(georeader: GeoJsonDirReader,
+                                          score_logger, request):
+    # St George's Hanover Square Church [osm w 38310265]
+    # is an Anglican church in the
+    # City of Westminster [osm n r 27365306 51781],
+    # central London, built in the early eighteenth century. The land on which
+    # the church stands was donated by General William Steuart, who laid the
+    # first stone in 1721. The church was designed by John James and was
+    # constructed under a project to build fifty new churches around London
+    # (the Queen Anne Churches). The building is one small block south of
+    # Hanover Square [osm w 38310101],
+    # near
+    # Oxford Circus [osm n 2354980085],
+    # in what is now the
+    # City of Westminster [osm n r 27365306 51781].
+    # Owing to its
+    # Mayfair [osm n 26745366] location, it has frequently been the venue for
+    # high society weddings.
+    st_georges_hanover_square_church = georeader.read(38310265)
+    city_of_westminster = georeader.read(27365306, 51781)
+    hanover_square = georeader.read(38310101)
+    # skip the node-only geometries, since they're not usable as regions
+    # oxford_circus = georeader.read(2354980085)
+    # mayfair = georeader.read(26745366)
+    prediction_parts = [
+        city_of_westminster,
+        South.of(hanover_square, distance=100 * UNITS.m),
+    ]
+    prediction = Intersection.of(*prediction_parts)
+    p, r, f1 = score_logger.p_r_f1(st_georges_hanover_square_church,
+                                   prediction, request)
+    # high recall + low precision because tightest constraint is based on blocks
+    # and the church is small in comparison
+    assert p > 0 and r > .9, plot(st_georges_hanover_square_church,
+                                  prediction, prediction_parts)
+
+
 # <entity id="GL249_256" wikipedia="Imola" osm="69300194 43020" type="node relation" status="5">
 #       <p id="GL249_256_001" num_links="7">Imola (Italian:&#160;[&#712;i&#720;mola]; Emilian: Iommla, Romagnol: J&#244;mla or Jemula) is a city and comune in the <link id="GL249_256_001_001" wikipedia="Metropolitan_City_of_Bologna" osm="42856" type="relation">Metropolitan City of Bologna</link>, located on the river <link id="GL249_256_001_002" wikipedia="Santerno" osm="2250854" type="relation">Santerno</link>, in the <link id="GL249_256_001_003" wikipedia="Emilia-Romagna" osm="1781917318 42611" type="node relation">Emilia-Romagna</link> region of northern Italy. The city is traditionally considered the western entrance to the historical region <link id="GL249_256_001_004" wikipedia="Romagna" osm="9084464" type="relation">Romagna</link>. </p> </entity>
 #
