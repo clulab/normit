@@ -1,8 +1,8 @@
 import datetime
 import pytest
 
-import normit.time.ops
-from normit.time.ops import *
+import normit.time
+from normit.time import *
 
 
 def test_interval():
@@ -825,7 +825,7 @@ def test_repr():
             Summer(),
             LastN(Interval.of(1907, 3), Period(QUARTER_YEAR, 3), n=2)
     ]:
-        assert obj == eval(repr(obj), vars(normit.time.ops))
+        assert obj == eval(repr(obj), vars(normit.time))
 
 
 def test_flatten():

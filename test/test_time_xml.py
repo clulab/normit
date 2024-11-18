@@ -2,8 +2,7 @@ import datetime
 import inspect
 import xml.etree.ElementTree as ET
 
-from normit.time.ops import *
-from normit.time.xml import *
+from normit.time import *
 
 
 def _isoformats(objects: list[Shift | Interval | Intervals]):
