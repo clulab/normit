@@ -51,6 +51,8 @@ class ScoreLogger:
         return precision, recall, f1
 
     def log(self):
+        if not self.names:
+            return
         print()
         for precision, recall, f1, name in zip(self.precisions, self.recalls,
                                                self.f1s, self.names):
