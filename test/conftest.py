@@ -1,4 +1,5 @@
 import normit.geo
+import pathlib
 import pytest
 import shapely.geometry.base
 import shapely.ops
@@ -14,10 +15,9 @@ def pytest_addoption(parser):
 @pytest.fixture
 def georeader(request):
     geojson_dir = request.config.getoption(GEOJSON_OPTION)
-    if geojson_dir is not None:
-        return normit.geo.GeoJsonDirReader(geojson_dir)
-    else:
-        pytest.skip(f"skipping as no {GEOJSON_OPTION}=DIR was provided")
+    if geojson_dir is None:
+        geojson_dir = pathlib.Path(__file__).parent / "data" / "openstreetmap"
+    return normit.geo.GeoJsonDirReader(geojson_dir)
 
 
 class ScoreLogger:
