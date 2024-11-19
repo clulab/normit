@@ -1,0 +1,7 @@
+geopandas
+matplotlib
+pint
+pyproj
+python-dateutil
+shapely
+utm
