@@ -2,7 +2,7 @@ import geopandas
 import matplotlib.pyplot as plt
 import shapely.geometry
 
-from .ops import *
+from .ops import *  # noqa: F401
 
 
 _PolygonLike = shapely.geometry.Polygon | shapely.geometry.MultiPolygon

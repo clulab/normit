@@ -8,8 +8,8 @@ import dateutil.rrule
 import enum
 import typing
 
-
-__all__ = [
+# noinspection PyUnresolvedReferences
+__all__ = [  # noqa: F822
     'Interval',
     'MICROSECOND',
     'MILLISECOND',
@@ -232,38 +232,39 @@ class Unit(enum.Enum):
         return self.name
 
     def truncate(self, dt: datetime.datetime) -> datetime.datetime:
-        if self is Unit.MILLISECOND:
-            dt = dt.replace(microsecond=dt.microsecond // 1000 * 1000)
-        elif self is Unit.SECOND:
-            dt = dt.replace(microsecond=0)
-        elif self is Unit.MINUTE:
-            dt = dt.replace(second=0, microsecond=0)
-        elif self is Unit.HOUR:
-            dt = dt.replace(minute=0, second=0, microsecond=0)
-        elif self is Unit.DAY:
-            dt = dt.replace(hour=0, minute=0, second=0, microsecond=0)
-        elif self is Unit.WEEK:
-            timetuple = dt.timetuple()
-            diff = timetuple.tm_yday - timetuple.tm_wday
-            ordinal = diff if diff >= 1 else diff + 7
-            week_start = datetime.date.fromordinal(ordinal)
-            dt = datetime.datetime(dt.year, week_start.month, week_start.day)
-            if diff < 1:
-                dt = dt + dateutil.relativedelta.relativedelta(days=-7)
-        elif self is Unit.MONTH:
-            dt = datetime.datetime(dt.year, dt.month, 1)
-        elif self is Unit.QUARTER_YEAR:
-            dt = datetime.datetime(dt.year, (dt.month - 1) // 3 * 3 + 1, 1)
-        elif self is Unit.YEAR:
-            dt = datetime.datetime(dt.year, 1, 1)
-        elif self is Unit.DECADE:
-            dt = datetime.datetime(dt.year // 10 * 10, 1, 1)
-        elif self is Unit.QUARTER_CENTURY:
-            dt = datetime.datetime(dt.year // 25 * 25, 1, 1)
-        elif self is Unit.CENTURY:
-            year = dt.year // 100 * 100
-            year = 1 if year == 0 else year  # year 0 does not exist
-            dt = datetime.datetime(year, 1, 1)
+        match self:
+            case Unit.MILLISECOND:
+                dt = dt.replace(microsecond=dt.microsecond // 1000 * 1000)
+            case Unit.SECOND:
+                dt = dt.replace(microsecond=0)
+            case Unit.MINUTE:
+                dt = dt.replace(second=0, microsecond=0)
+            case Unit.HOUR:
+                dt = dt.replace(minute=0, second=0, microsecond=0)
+            case Unit.DAY:
+                dt = dt.replace(hour=0, minute=0, second=0, microsecond=0)
+            case Unit.WEEK:
+                timetuple = dt.timetuple()
+                diff = timetuple.tm_yday - timetuple.tm_wday
+                ordinal = diff if diff >= 1 else diff + 7
+                start = datetime.date.fromordinal(ordinal)
+                dt = datetime.datetime(dt.year, start.month, start.day)
+                if diff < 1:
+                    dt = dt + dateutil.relativedelta.relativedelta(days=-7)
+            case Unit.MONTH:
+                dt = datetime.datetime(dt.year, dt.month, 1)
+            case Unit.QUARTER_YEAR:
+                dt = datetime.datetime(dt.year, (dt.month - 1) // 3 * 3 + 1, 1)
+            case Unit.YEAR:
+                dt = datetime.datetime(dt.year, 1, 1)
+            case Unit.DECADE:
+                dt = datetime.datetime(dt.year // 10 * 10, 1, 1)
+            case Unit.QUARTER_CENTURY:
+                dt = datetime.datetime(dt.year // 25 * 25, 1, 1)
+            case Unit.CENTURY:
+                year = dt.year // 100 * 100
+                year = 1 if year == 0 else year  # year 0 does not exist
+                dt = datetime.datetime(year, 1, 1)
         return dt
 
     def relativedelta(self, n) -> dateutil.relativedelta.relativedelta:

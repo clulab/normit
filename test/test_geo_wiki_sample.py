@@ -195,14 +195,59 @@ def test_st_georges_hanover_square_church(georeader: GeoJsonDirReader,
                                   prediction, prediction_parts)
 
 
-# <entity id="GL249_256" wikipedia="Imola" osm="69300194 43020" type="node relation" status="5">
-#       <p id="GL249_256_001" num_links="7">Imola (Italian:&#160;[&#712;i&#720;mola]; Emilian: Iommla, Romagnol: J&#244;mla or Jemula) is a city and comune in the <link id="GL249_256_001_001" wikipedia="Metropolitan_City_of_Bologna" osm="42856" type="relation">Metropolitan City of Bologna</link>, located on the river <link id="GL249_256_001_002" wikipedia="Santerno" osm="2250854" type="relation">Santerno</link>, in the <link id="GL249_256_001_003" wikipedia="Emilia-Romagna" osm="1781917318 42611" type="node relation">Emilia-Romagna</link> region of northern Italy. The city is traditionally considered the western entrance to the historical region <link id="GL249_256_001_004" wikipedia="Romagna" osm="9084464" type="relation">Romagna</link>. </p> </entity>
-#
-# <entity id="GL244_177" wikipedia="Hummingbird_Highway_(Belize)" osm="9126103" type="relation" status="5">
-#       <p id="GL244_177_001" num_links="7">Hummingbird Highway is one of the four major highways in <link id="GL244_177_001_001" wikipedia="Belize" osm="332779764 2609003380 287827" type="node node relation">Belize</link>. It connects the <link id="GL244_177_001_002" wikipedia="George_Price_Highway" osm="9319136" type="relation">George Price Highway</link> outside of <link id="GL244_177_001_003" wikipedia="Belmopan" osm="282294082" type="node">Belmopan</link>, <link id="GL244_177_001_004" wikipedia="Cayo_District" osm="962357" type="relation">Cayo District</link> to the <link id="GL244_177_001_005" wikipedia="Southern_Highway_(Belize)" osm="9103780" type="relation">Southern Highway</link> outside of <link id="GL244_177_001_006" wikipedia="Dangriga" osm="297463331" type="node">Dangriga</link>, <link id="GL244_177_001_007" wikipedia="Stann_Creek_District" osm="962353" type="relation">Stann Creek District</link>. </p> </entity>
-#
-# <entity id="GL265_134" wikipedia="Julian&#243;w,_Ryki_County" osm="31875917 5580948" type="node relation" status="5">
-#       <p id="GL265_134_001" num_links="5">Julian&#243;w [ju&#712;ljanuf] is a village in the administrative district of <link id="GL265_134_001_005" wikipedia="Gmina_K%C5%82oczew" osm="2696479" type="relation">Gmina K&#322;oczew</link>, within <link id="GL265_134_001_001" wikipedia="Ryki_County" osm="2617226" type="relation">Ryki County</link>, <link id="GL265_134_001_002" wikipedia="Lublin_Voivodeship" osm="505006035 130919" type="node relation">Lublin Voivodeship</link>, in eastern Poland.[1] It lies approximately 10 kilometres (6&#160;mi) north of <link id="GL265_134_001_003" wikipedia="Ryki" osm="362659264 3008764" type="node relation">Ryki</link> and 67&#160;km (42&#160;mi) north-west of the regional capital <link id="GL265_134_001_004" wikipedia="Lublin" osm="30014556 2206549 2904797 2904798" type="node relation relation relation">Lublin</link>. </p> </entity>
-#
-# <entity id="GL079_094" wikipedia="Burg_Stargard" osm="117830170 1419900" type="node relation" status="5">
-#       <p id="GL079_094_001" num_links="4">Burg Stargard (Polabian Stargart, is a small town in the <link id="GL079_094_001_001" wikipedia="Mecklenburgische_Seenplatte_(district)" osm="1739376" type="relation">Mecklenburgische Seenplatte</link> district, in <link id="GL079_094_001_002" wikipedia="Mecklenburg-Vorpommern" osm="473857781 28322 62774" type="node relation relation">Mecklenburg-Vorpommern</link>, <link id="GL079_094_001_003" wikipedia="Germany" osm="1683325355 51477 62781" type="node relation relation">Germany</link>. It is situated 8 kilometres (5.0&#160;mi) southeast of <link id="GL079_094_001_004" wikipedia="Neubrandenburg" osm="29680830 62705" type="node relation">Neubrandenburg</link>. </p> </entity>
+def _imola():
+    # Imola [osm nr 69300194 43020]
+    # (Italian:&#160;[&#712;i&#720;mola]; Emilian: Iommla, Romagnol:
+    # J&#244;mla or Jemula) is a city and comune in the
+    # Metropolitan City of Bologna [osm r 42856],
+    # located on the river
+    # Santerno [osm r 2250854],
+    # in the
+    # Emilia-Romagna [osm n r 1781917318 42611] region
+    # of northern Italy. The city is traditionally considered the western
+    # entrance to the historical region
+    # Romagna [osm r 9084464]
+    pass
+
+
+def _hummingbird_highway_belize():
+    # Hummingbird Highway [osm r 9126103]
+    # is one of the four major highways in
+    # Belize [osm n n r 332779764 2609003380 287827].
+    # It connects the
+    # George Price Highway [osm r 9319136]
+    # outside of
+    # Belmopan [osm n 282294082],
+    # Cayo District [osm r 962357]
+    # to the
+    # Southern Highway [osm r 9103780]
+    # outside of
+    # Dangriga [osm n 297463331],
+    # Stann Creek District [osm r 962353]
+    pass
+
+
+def _julianow_ryki_county():
+    # Julian&#243;w [ju&#712;ljanuf] [osm n r 31875917 5580948]
+    # is a village in the administrative district of
+    # Gmina K&#322;oczew [osm r 2696479],
+    # within
+    # Ryki County [osm r 2617226],
+    # Lublin Voivodeship [osm n r 505006035 130919]<, in eastern Poland.
+    # It lies approximately 10 kilometres (6&#160;mi) north of
+    # Ryki [osm n r 362659264 3008764]
+    # and 67&#160;km (42&#160;mi) north-west of the regional capital
+    # Lublin [osm n r r r 30014556 2206549 2904797 2904798]
+    pass
+
+
+def _burg_stargard():
+    # Burg Stargard [osm n r 117830170 1419900]
+    # (Polabian Stargart, is a small town in the
+    # Mecklenburgische Seenplatte [osm r 1739376]
+    # district, in
+    # Mecklenburg-Vorpommern [osm n r r 473857781 28322 62774],
+    # Germany [osm n r r 1683325355 51477 62781].
+    # It is situated 8 kilometres (5.0&#160;mi) southeast of
+    # Neubrandenburg [osm n r 29680830 62705]
+    pass

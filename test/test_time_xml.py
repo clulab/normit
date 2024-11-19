@@ -67,7 +67,7 @@ def test_period_calendar_interval():
 
 
 def test_sum():
-    xml_str = inspect.cleandoc(f"""
+    xml_str = inspect.cleandoc("""
         <data>
             <annotations>
                 <entity>
@@ -484,7 +484,7 @@ def test_n_operators():
 
 
 def test_sub_interval():
-    xml_str = inspect.cleandoc(f"""
+    xml_str = inspect.cleandoc("""
         <data>
             <annotations>
                 <entity>
@@ -665,7 +665,7 @@ def test_doc_time():
 
 
 def test_discontinuous_span():
-    xml_str = inspect.cleandoc(f"""
+    xml_str = inspect.cleandoc("""
         <data>
             <annotations>
                 <entity>

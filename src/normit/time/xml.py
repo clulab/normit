@@ -115,7 +115,7 @@ def from_xml(elem: et.Element,
                     doc_time = known_intervals.get((None, None))
                     return Year(doc_time.start.year)
                 case "DocTime" | "DocTime-Year":
-                    raise ValueError(f"known_intervals[(None, None)] required")
+                    raise ValueError("known_intervals[(None, None)] required")
                 case "DocTime-Era":
                     return Interval(datetime.datetime.min, None)
                 case "Unknown":
