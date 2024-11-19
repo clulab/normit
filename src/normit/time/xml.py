@@ -19,8 +19,8 @@ def from_xml(elem: et.Element,
 
     :param elem: The root <data> element of a SCATE Anafora XML document.
     :param known_intervals: A mapping from character offset spans to Intervals,
-    representing intervals that are already known before parsing begins. The
-    document creation time should be specified with the span (None, None).
+        representing intervals that are already known before parsing begins. The
+        document creation time should be specified with the span (None, None).
     :return: Intervals and Shifts corresponding to the XML definitions.
     """
     if known_intervals is None:

@@ -111,7 +111,7 @@ class Interval:
             Interval.fromisoformat("1362-03-01 1362-04-01")
 
         :param string: A string containing a starting point and an ending point
-        in ISO 8601 format.
+            in ISO 8601 format.
         :return: An Interval from the starting point to the ending point.
         """
         isoformats = string.split()
@@ -131,9 +131,9 @@ class Interval:
             Interval.of(1998, 4, 1)
 
         :param args: A starting point specified by any prefix of the list of
-        time units: year, month, day, hour, minute, second, and microsecond.
+            time units: year, month, day, hour, minute, second, and microsecond.
         :return: An Interval that starts from the given starting point, and ends
-        after the smallest time unit specified.
+            after the smallest time unit specified.
         """
         # match Interval.of arguments with datetime.__init__ arguments
         names = ["year", "month", "day",

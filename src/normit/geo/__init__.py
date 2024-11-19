@@ -5,6 +5,13 @@ import shapely.geometry
 from .ops import *  # noqa: F401
 
 
+__all__ = ops.__all__ + ['show_plot', 'GeoJsonDirReader']
+for _name in ops.__all__:
+    _obj = globals()[_name]
+    if hasattr(_obj, "__module__"):
+        _obj.__module__ = __name__
+
+
 _PolygonLike = shapely.geometry.Polygon | shapely.geometry.MultiPolygon
 
 

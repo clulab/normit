@@ -8,6 +8,23 @@ import shapely.affinity
 import shapely.ops
 import utm
 
+
+__all__ = [
+    'UNITS',
+    'utm_proj',
+    'North',
+    'NorthEast',
+    'East',
+    'SouthEast',
+    'South',
+    'SouthWest',
+    'West',
+    'NorthWest',
+    'Near',
+    'Between',
+    'Intersection'
+]
+
 UNITS = pint.UnitRegistry()
 
 
