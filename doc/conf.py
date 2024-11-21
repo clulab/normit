@@ -14,6 +14,7 @@ html_theme = 'sphinx_rtd_theme'
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.intersphinx',
+    'myst_parser',
 ]
 autodoc_typehints = 'description'
 # autodoc_member_order = 'bysource'
@@ -25,3 +26,4 @@ intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
     'python-dateutil': ('https://dateutil.readthedocs.io/en/stable', None),
 }
+myst_heading_anchors = 3

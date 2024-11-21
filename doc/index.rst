@@ -1,8 +1,10 @@
-normit
-======
+.. include:: ../README.md
+   :parser: myst_parser.sphinx_
 
-The normit library normalizes information in text: times, locations, etc.
-The following modules are available for different types of normalization.
+Modules
+=======
+
+The main modules of the normit library are:
 
 .. toctree::
    :maxdepth: 1
