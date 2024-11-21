@@ -1,8 +1,8 @@
 normit
 ======
 
-![tests](https://github.com/clulab/normit/actions/workflows/tests.yml/badge.svg)
-![docs](https://readthedocs.org/projects/normit/badge/?version=latest)
+[![tests](https://github.com/clulab/normit/actions/workflows/tests.yml/badge.svg)](https://github.com/clulab/normit/actions/workflows/tests.yml)
+[![docs](https://readthedocs.org/projects/normit/badge/?version=latest)](https://app.readthedocs.org/projects/normit/)
 
 The normit library normalizes information in text: times, locations, etc.
 
