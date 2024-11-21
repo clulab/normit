@@ -11,6 +11,7 @@ import typing
 # noinspection PyUnresolvedReferences
 __all__ = [  # noqa: F822
     'Interval',
+    'Unit',
     'MICROSECOND',
     'MILLISECOND',
     'SECOND',
@@ -97,7 +98,7 @@ class Interval:
     end: datetime.datetime | None
 
     @classmethod
-    def fromisoformat(cls, string):
+    def fromisoformat(cls, string: str):
         """
         Creates an Interval from two dates in ISO 8601 format.
         For example, "May 1362" may be represented as::
@@ -119,7 +120,7 @@ class Interval:
         return cls(start, end)
 
     @classmethod
-    def of(cls, *args):
+    def of(cls, *args: int):
         """
         Creates an Interval that aligns to exactly one calendar unit.
         For example, "1990" may be represented as::
@@ -205,6 +206,13 @@ class Interval:
 
 
 class Unit(enum.Enum):
+    """
+    A named unit of time.
+
+    Note that the values of this enum are also available at the module level.
+    So, for example, :const:`normit.time.SECOND` is an alias for
+    :const:`normit.time.Unit.SECOND`.
+    """
     MICROSECOND = (1, "microseconds")
     MILLISECOND = (2, None)
     SECOND = (3, "seconds")
@@ -232,6 +240,12 @@ class Unit(enum.Enum):
         return self.name
 
     def truncate(self, dt: datetime.datetime) -> datetime.datetime:
+        """
+        Sets all units smaller than this one in the datetime to zero.
+
+        :param dt: The datetime to truncate
+        :return: The truncated datetime
+        """
         match self:
             case Unit.MILLISECOND:
                 dt = dt.replace(microsecond=dt.microsecond // 1000 * 1000)
@@ -268,6 +282,12 @@ class Unit(enum.Enum):
         return dt
 
     def relativedelta(self, n) -> dateutil.relativedelta.relativedelta:
+        """
+        Constructs a :class:`dateutil.relativedelta.relativedelta` object
+        representing of a number of repetitions of this unit.
+        :param n: The number of repetitions
+        :return: The constructed relativedelta
+        """
         if self._relativedelta_name is not None:
             kwargs = {self._relativedelta_name: n}
         elif self is Unit.CENTURY:
@@ -283,6 +303,14 @@ class Unit(enum.Enum):
         return dateutil.relativedelta.relativedelta(**kwargs)
 
     def expand(self, interval: Interval, n: int = 1) -> Interval:
+        """
+        Expands an interval to the width of a number of repetitions of this
+        unit.
+
+        :param interval: The interval to expand
+        :param n: The number of repetitions
+        :return: The expanded interval
+        """
         if interval.start + self.relativedelta(n) > interval.end:
             mid = interval.start + (interval.end - interval.start) / 2
             if n % 2 == 0 or self in {Unit.MILLISECOND,

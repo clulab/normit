@@ -1,3 +1,8 @@
+"""
+The normit.geo module provides utilities for normalizing geographical
+expressions in text.
+"""
+
 import geopandas
 import matplotlib.pyplot as plt
 import shapely.geometry

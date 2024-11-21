@@ -12,6 +12,7 @@ import utm
 __all__ = [
     'UNITS',
     'utm_proj',
+    'GeoCardinal',
     'North',
     'NorthEast',
     'East',
@@ -25,7 +26,7 @@ __all__ = [
     'Intersection'
 ]
 
-UNITS = pint.UnitRegistry()
+UNITS = pint.UnitRegistry()  #: TEST
 
 
 def utm_proj(geometry: shapely.geometry.base.BaseGeometry) -> pyproj.Proj:

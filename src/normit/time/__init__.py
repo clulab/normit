@@ -1,3 +1,8 @@
+"""
+The normit.time module provides utilities for normalizing time expressions in
+text.
+"""
+
 from .ops import *  # noqa: F401
 from .xml import *  # noqa: F401
 
