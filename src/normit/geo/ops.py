@@ -105,12 +105,12 @@ class Near:
         if distance is None:
             result = geometry.buffer(radius_m)
         # if a distance is specified, construct a ring-like buffer at a distance
-        # buffer to -2/+2 radius because we don't know whether to start from the
-        # center of the polygon or the edge
+        # buffer to -2/+2 diameter because we don't know whether to start from
+        # the center of the polygon or the edge
         else:
             dist = max(0.0, distance.to(UNITS.meter).magnitude)
-            result = (geometry.buffer(dist + 2 * radius_m) -
-                      geometry.buffer(dist - 2 * radius_m))
+            result = (geometry.buffer(dist + 4 * radius_m) -
+                      geometry.buffer(dist - 4 * radius_m))
         # remove any overlap with the original geometry
         result -= geometry
         # project back to latitude, longitude
@@ -167,14 +167,13 @@ def _radius_by_area_in_meters(geometry: shapely.geometry.base.BaseGeometry):
     :param geometry: The geometry
     :return: The radius
     """
-    if geometry.area:
-        perimeter = geometry.boundary.length
-        area = geometry.area
-    # for lines, calculate area assuming a width of 1km = 1000m
-    # p = 2 * l + 2 * w
-    # l = p / 2 - w
-    # a = l * w = p * w / 2 - w * w = p * 500 - 1000000
+    # for lines (e.g., rivers), assume a 1km radius
+    if not geometry.area:
+        radius = 1000
+    # for polygons, calculate radius from perimeter and area
     else:
-        perimeter = geometry.length
-        area = perimeter * 500 - 1000000
-    return (perimeter / math.pi) * area / (perimeter ** 2 / (4 * math.pi))
+        perimeter = geometry.boundary.length
+        circle_radius = perimeter / math.pi / 2
+        circle_area = math.pi * circle_radius ** 2
+        radius = circle_radius * geometry.area / circle_area
+    return radius

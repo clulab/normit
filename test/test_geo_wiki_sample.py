@@ -1,3 +1,5 @@
+import geopandas
+import matplotlib.pyplot as plt
 import shapely.geometry.base
 
 from normit.geo import *
@@ -195,7 +197,7 @@ def test_st_georges_hanover_square_church(georeader: GeoJsonDirReader,
                                   prediction, prediction_parts)
 
 
-def _imola():
+def test_imola(georeader: GeoJsonDirReader, score_logger, request):
     # Imola [osm nr 69300194 43020]
     # (Italian:&#160;[&#712;i&#720;mola]; Emilian: Iommla, Romagnol:
     # J&#244;mla or Jemula) is a city and comune in the
@@ -207,7 +209,21 @@ def _imola():
     # of northern Italy. The city is traditionally considered the western
     # entrance to the historical region
     # Romagna [osm r 9084464]
-    pass
+    imola = georeader.read(69300194, 43020)
+    bologna = georeader.read(42856)
+    santerno = georeader.read(2250854)
+    emilia_romagna = georeader.read(1781917318, 42611)
+    romagna = georeader.read(9084464)
+
+    prediction_parts = [
+        bologna,
+        Near.to(santerno),
+        emilia_romagna,
+        West.part_of(romagna),
+    ]
+    prediction = Intersection.of(*prediction_parts)
+    p, r, f1 = score_logger.p_r_f1(imola, prediction, request)
+    assert f1 > .2, plot(imola, prediction, prediction_parts)
 
 
 def _hummingbird_highway_belize():

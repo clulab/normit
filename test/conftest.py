@@ -63,7 +63,7 @@ class ScoreLogger:
         print(f"P: {precision:.3f}  R: {recall:.3f}  F1: {f1:.3f}  MEAN")
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope='session')
 def score_logger(request):
     logger = ScoreLogger()
     yield logger
