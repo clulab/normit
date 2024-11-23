@@ -4,7 +4,6 @@ import shapely.geometry.base
 
 from normit.geo import *
 
-
 def plot(reference: shapely.geometry.base.BaseGeometry,
          prediction: shapely.geometry.base.BaseGeometry,
          prediction_parts: list[shapely.geometry.base.BaseGeometry]):
@@ -226,7 +225,8 @@ def test_imola(georeader: GeoJsonDirReader, score_logger, request):
     assert f1 > .2, plot(imola, prediction, prediction_parts)
 
 
-def _hummingbird_highway_belize():
+def test_hummingbird_highway_belize(georeader: GeoJsonDirReader,
+                                    score_logger, request):
     # Hummingbird Highway [osm r 9126103]
     # is one of the four major highways in
     # Belize [osm n n r 332779764 2609003380 287827].
@@ -240,7 +240,30 @@ def _hummingbird_highway_belize():
     # outside of
     # Dangriga [osm n 297463331],
     # Stann Creek District [osm r 962353]
-    pass
+    hummingbird_highway = georeader.read(9126103)
+    belize = georeader.read(332779764, 2609003380, 287827)
+    george_price_highway = georeader.read(9319136)
+    cayo_district = georeader.read(962357)
+    southern_highway = georeader.read(9103780)
+    stann_creek_district = georeader.read(962353)
+    prediction = Intersection.of(
+        belize,
+        Between.of(
+            Intersection.of(george_price_highway, cayo_district),
+            Intersection.of(southern_highway, stann_creek_district)))
+    prediction_parts = [
+        belize,
+        george_price_highway,
+        southern_highway,
+        Between.of(
+            Intersection.of(george_price_highway, cayo_district),
+            Intersection.of(southern_highway, stann_creek_district))
+    ]
+    p, r, f1 = score_logger.p_r_f1(hummingbird_highway, prediction, request)
+    # high recall + low precision because tightest constraint is a region
+    # between two roads and the target road is a tiny portion of that
+    assert p > 0 and r > .7, plot(hummingbird_highway,
+                                  prediction, prediction_parts)
 
 
 def _julianow_ryki_county():

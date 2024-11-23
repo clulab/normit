@@ -122,9 +122,20 @@ class Between:
     @staticmethod
     def of(geometry1: shapely.geometry.base.BaseGeometry,
            geometry2: shapely.geometry.base.BaseGeometry) -> shapely.Polygon:
-        chord1 = _chord_perpendicular_to_point(geometry1, geometry2.centroid)
-        chord2 = _chord_perpendicular_to_point(geometry2, geometry1.centroid)
-        return chord1.union(chord2).convex_hull - geometry1 - geometry2
+        line1 = Between._get_line(geometry1, geometry2)
+        line2 = Between._get_line(geometry2, geometry1)
+        return line1.union(line2).convex_hull - geometry1 - geometry2
+
+    @staticmethod
+    def _get_line(
+            geometry: shapely.geometry.base.BaseGeometry,
+            distant_geometry: shapely.geometry.base.BaseGeometry
+    ) -> shapely.LineString | shapely.MultiLineString:
+        if isinstance(geometry, shapely.LineString | shapely.MultiLineString):
+            return geometry
+        else:
+            return _line_through_centroid_perpendicular_to_point(
+                geometry, distant_geometry.centroid).intersection(geometry)
 
 
 class Intersection:
@@ -146,17 +157,6 @@ def _line_through_centroid_perpendicular_to_point(
     # extend the line past the geometry
     scale = line.length / (shapely.minimum_bounding_radius(geometry) * 2)
     return shapely.affinity.scale(line, xfact=scale, yfact=scale)
-
-
-def _chord_perpendicular_to_point(geometry: shapely.geometry.base.BaseGeometry,
-                                  point: shapely.Point) -> shapely.LineString:
-    line = _line_through_centroid_perpendicular_to_point(geometry, point)
-    # return only the portion of the line that intersects the input
-    result = line.intersection(geometry)
-    # if the line is discontinuous, take the longest piece
-    if isinstance(result, shapely.MultiLineString):
-        result = max(result.geoms, key=lambda g: g.length)
-    return result
 
 
 def _radius_by_area_in_meters(geometry: shapely.geometry.base.BaseGeometry):

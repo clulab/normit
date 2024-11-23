@@ -34,6 +34,9 @@ class ScoreLogger:
         proj = normit.geo.utm_proj(reference)
         reference = shapely.ops.transform(proj, reference)
         prediction = shapely.ops.transform(proj, prediction)
+        # for rivers, etc. buffer to 1km so there is area to compare
+        if not reference.area:
+            reference = reference.buffer(1000)
         intersection_area = reference.intersection(prediction).area
         if not prediction.area:
             precision = 1.0
@@ -43,7 +46,10 @@ class ScoreLogger:
             recall = 1.0
         else:
             recall = intersection_area / reference.area
-        f1 = 2 * precision * recall / (precision + recall)
+        if not precision and not recall:
+            f1 = 0.0
+        else:
+            f1 = 2 * precision * recall / (precision + recall)
         self.precisions.append(precision)
         self.recalls.append(recall)
         self.f1s.append(f1)
