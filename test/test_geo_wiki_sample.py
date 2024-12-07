@@ -266,21 +266,39 @@ def test_hummingbird_highway_belize(georeader: GeoJsonDirReader,
                                   prediction, prediction_parts)
 
 
-def _julianow_ryki_county():
+def test_julianow_ryki_county(georeader: GeoJsonDirReader,
+                              score_logger, request):
     # Julian&#243;w [ju&#712;ljanuf] [osm n r 31875917 5580948]
     # is a village in the administrative district of
     # Gmina K&#322;oczew [osm r 2696479],
     # within
     # Ryki County [osm r 2617226],
-    # Lublin Voivodeship [osm n r 505006035 130919]<, in eastern Poland.
+    # Lublin Voivodeship [osm n r 505006035 130919], in eastern Poland.
     # It lies approximately 10 kilometres (6&#160;mi) north of
     # Ryki [osm n r 362659264 3008764]
     # and 67&#160;km (42&#160;mi) north-west of the regional capital
     # Lublin [osm n r r r 30014556 2206549 2904797 2904798]
-    pass
+    julianow = georeader.read(31875917, 5580948)
+    gmina = georeader.read(2696479)
+    ryki_county = georeader.read(2617226)
+    lublin_voivodeship = georeader.read(505006035, 130919)
+    ryki = georeader.read(362659264, 3008764)
+    lublin = georeader.read(30014556, 2206549, 2904797, 2904798)
+    prediction_parts = [
+        gmina,
+        ryki_county,
+        lublin_voivodeship,
+        North.of(ryki, 10 * UNITS.km),
+        NorthWest.of(lublin, 67 * UNITS.km),
+    ]
+    prediction = Intersection.of(*prediction_parts)
+    p, r, f1 = score_logger.p_r_f1(julianow, prediction, request)
+    # high recall + low precision because the constraints are based on
+    # districts, cities, etc. and the village is small in comparison
+    assert p > 0 and r > .9, plot(julianow, prediction, prediction_parts)
 
 
-def _burg_stargard():
+def test_burg_stargard(georeader: GeoJsonDirReader, score_logger, request):
     # Burg Stargard [osm n r 117830170 1419900]
     # (Polabian Stargart, is a small town in the
     # Mecklenburgische Seenplatte [osm r 1739376]
@@ -289,4 +307,17 @@ def _burg_stargard():
     # Germany [osm n r r 1683325355 51477 62781].
     # It is situated 8 kilometres (5.0&#160;mi) southeast of
     # Neubrandenburg [osm n r 29680830 62705]
-    pass
+    burg_stargard = georeader.read(117830170, 1419900)
+    mecklenburgische_seenplatte = georeader.read(1739376)
+    mecklenburg_vorpommern = georeader.read(473857781, 28322, 62774)
+    germany = georeader.read(1683325355, 51477, 62781)
+    neubrandenburg = georeader.read(29680830, 62705)
+    prediction_parts = [
+        mecklenburgische_seenplatte,
+        mecklenburg_vorpommern,
+        germany,
+        SouthEast.of(neubrandenburg, 8 * UNITS.km),
+    ]
+    prediction = Intersection.of(*prediction_parts)
+    p, r, f1 = score_logger.p_r_f1(burg_stargard, prediction, request)
+    assert f1 > .2, plot(burg_stargard, prediction, prediction_parts)
