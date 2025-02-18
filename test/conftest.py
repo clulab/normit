@@ -39,11 +39,11 @@ class ScoreLogger:
             reference = reference.buffer(1000)
         intersection_area = reference.intersection(prediction).area
         if not prediction.area:
-            precision = 1.0
+            precision = 0.0
         else:
             precision = intersection_area / prediction.area
         if not reference.area:
-            recall = 1.0
+            recall = 0.0
         else:
             recall = intersection_area / reference.area
         if not precision and not recall:
@@ -53,7 +53,10 @@ class ScoreLogger:
         self.precisions.append(precision)
         self.recalls.append(recall)
         self.f1s.append(f1)
-        self.names.append(request.function.__name__)
+        if isinstance(request, pytest.FixtureRequest):
+            self.names.append(request.function.__name__)
+        else:
+            self.names.append(request)
         return precision, recall, f1
 
     def log(self):
