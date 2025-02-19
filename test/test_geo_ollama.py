@@ -2,7 +2,6 @@ import pathlib
 import pytest
 import xml.etree.ElementTree as et
 import re
-import simpleeval
 
 import normit.geo.ops
 from normit.geo import *
@@ -76,7 +75,10 @@ Y = Intersection.of(
 
 @pytest.mark.skipif("not 'ollama' in config.getoption('keyword')")
 def test_ollama_geocode_test(georeader: GeoJsonDirReader, score_logger):
+
+    # import locally, as these are not yet required for the rest of the library
     import ollama
+    import simpleeval
 
     model_name = 'llama3.2:3b'
     # model_name = 'deepseek-r1:14b'
