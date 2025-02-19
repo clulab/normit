@@ -68,7 +68,10 @@ class ScoreLogger:
             print(f"P: {precision:.3f}  R: {recall:.3f}  F1: {f1:.3f}  {name}")
         precision = sum(self.precisions) / len(self.precisions)
         recall = sum(self.recalls) / len(self.recalls)
-        f1 = 2 * precision * recall / (precision + recall)
+        if precision and recall:
+            f1 = 2 * precision * recall / (precision + recall)
+        else:
+            f1 = 0.0
         print(f"P: {precision:.3f}  R: {recall:.3f}  F1: {f1:.3f}  MEAN")
 
 
