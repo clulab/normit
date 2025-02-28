@@ -94,24 +94,24 @@ sample_data = [
          objects="waterford, martins_ferry",
          response="""\
 Y = {intersection}(
-  # "southern Waterford"
-  {south_part_of}(waterford),  
-  # "10 miles north of Martins Ferry"
-  {north_of}(martins_ferry, distance=10 * UNITS.miles)
-  # "circular mountain range" is irrelevant to the geometry of Y
+  # "a circular mountain range" is irrelevant to the geometry of Y
+  # "in southern Waterford" means:
+  {south_part_of}(waterford),
+  # "10 miles north of Martins Ferry" means:
+  {north_of}(martins_ferry, distance=10 * UNITS.miles),
 )
 """),
     dict(text="Y is between Garden City and Stanley, in Litchfield, 25 km south east of Bebington Vale. The north west of Y is rainy.",
          objects="litchfield, garden_city, stanley, bebington_vale",
          response="""\
 Y = {intersection}(
-  # "in Litchfield"
-  litchfield,
-  # "between Garden City and Stanley"
+  # "between Garden City and Stanley" means:
   {between}(garden_city, stanley),
-  # "25 km south east of Bebington Vale"
-  {south_east_of}(bebington_vale, distance=25 * UNITS.km)
-  # "north west of Y is rainy" is irrelevant to the geometry of Y
+  # "in Litchfield" means:
+  litchfield,
+  # "25 km south east of Bebington Vale" means:
+  {south_east_of}(bebington_vale, distance=25 * UNITS.km),
+  # "The north west of Y is rainy" is irrelevant to the geometry of Y
 )
 """),
 ]
