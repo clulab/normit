@@ -2,6 +2,7 @@ import pathlib
 import pytest
 import xml.etree.ElementTree as et
 import re
+import textwrap
 import traceback
 
 import normit.geo.ops
@@ -28,93 +29,117 @@ geo_ops_functions = dict(
     south_west_part_of=SouthWest.part_of,
     west_part_of=West.part_of,
 )
-geo_ops_as_functions = {name: name for name in geo_ops_functions.keys()}
-geo_ops_as_methods = dict(
-    intersection='Intersection.of',
-    near='Near.to',
-    between='Between.of',
-    north_west_of='NorthWest.of',
-    north_of='North.of',
-    north_east_of='NorthEast.of',
-    east_of='East.of',
-    south_east_of='SouthEast.of',
-    south_of='South.of',
-    south_west_of='SouthWest.of',
-    west_of='West.of',
-    north_west_part_of='NorthWest.part_of',
-    north_part_of='North.part_of',
-    north_east_part_of='NorthEast.part_of',
-    east_part_of='East.part_of',
-    south_east_part_of='SouthEast.part_of',
-    south_part_of='South.part_of',
-    south_west_part_of='SouthWest.part_of',
-    west_part_of='West.part_of',
-)
 
-task = """\
-Use the normit.geo Python library, https://normit.readthedocs.io/, to calculate the shape of a geographical region.
-The library operates over shapely Geometry objects and and pint Quantity objects.
-The library provides the following functions:
 
-* {intersection}(*geometries: shapely.Geometry) -> Geometry
-* {near}(geometry: shapely.Geometry, distance: pint.Quantity = None, radius: pint.Quantity = None) -> Geometry
-* {between}(geometry1: shapely.Geometry, geometry2: shapely.Geometry) -> Geometry
-* {north_west_of}(geometry: shapely.Geometry, distance: pint.Quantity = None) -> Geometry
-* {north_of}(geometry: shapely.Geometry, distance: pint.Quantity = None) -> Geometry
-* {north_east_of}(geometry: shapely.Geometry, distance: pint.Quantity = None) -> Geometry
-* {east_of}(geometry: shapely.Geometry, distance: pint.Quantity = None) -> Geometry
-* {south_east_of}(geometry: shapely.Geometry, distance: pint.Quantity = None) -> Geometry
-* {south_of}(geometry: shapely.Geometry, distance: pint.Quantity = None) -> Geometry
-* {south_west_of}(geometry: shapely.Geometry, distance: pint.Quantity = None) -> Geometry
-* {west_of}(geometry: shapely.Geometry, distance: pint.Quantity = None) -> Geometry
-* {north_west_part_of}(geometry: shapely.Geometry) -> Geometry
-* {north_part_of}(geometry: shapely.Geometry) -> Geometry
-* {north_east_part_of}(geometry: shapely.Geometry) -> Geometry
-* {east_part_of}(geometry: shapely.Geometry) -> Geometry
-* {south_east_part_of}(geometry: shapely.Geometry) -> Geometry
-* {south_part_of}(geometry: shapely.Geometry) -> Geometry
-* {south_west_part_of}(geometry: shapely.Geometry) -> Geometry
-* {west_part_of}(geometry: shapely.Geometry) -> Geometry
-* Number * UNITS.km -> pint.Quantity
-* Number * UNITS.miles -> pint.Quantity"""
+class GeoPromptFactory:
+    def __init__(self, call_style):
+        match call_style:
+            case "function":
+                self.function_names = {name: name for name in geo_ops_functions.keys()}
+            case "classmethod":
+                self.function_names = dict(
+                    intersection='Intersection.of',
+                    near='Near.to',
+                    between='Between.of',
+                    north_west_of='NorthWest.of',
+                    north_of='North.of',
+                    north_east_of='NorthEast.of',
+                    east_of='East.of',
+                    south_east_of='SouthEast.of',
+                    south_of='South.of',
+                    south_west_of='SouthWest.of',
+                    west_of='West.of',
+                    north_west_part_of='NorthWest.part_of',
+                    north_part_of='North.part_of',
+                    north_east_part_of='NorthEast.part_of',
+                    east_part_of='East.part_of',
+                    south_east_part_of='SouthEast.part_of',
+                    south_part_of='South.part_of',
+                    south_west_part_of='SouthWest.part_of',
+                    west_part_of='West.part_of',
+                )
+            case _:
+                raise NotImplementedError(call_style)
 
-prompt_template = """\
-Given the input text:
+    def system(self):
+        return dict(
+            role='system',
+            content=textwrap.dedent("""\
+                Use the normit.geo Python library, https://normit.readthedocs.io/, to calculate the shape of a geographical region.
+                The library operates over shapely Geometry objects and and pint Quantity objects.
+                The library provides the following functions:
 
-"{text}"
+                * {intersection}(*geometries: shapely.Geometry) -> Geometry
+                * {near}(geometry: shapely.Geometry, distance: pint.Quantity = None, radius: pint.Quantity = None) -> Geometry
+                * {between}(geometry1: shapely.Geometry, geometry2: shapely.Geometry) -> Geometry
+                * {north_west_of}(geometry: shapely.Geometry, distance: pint.Quantity = None) -> Geometry
+                * {north_of}(geometry: shapely.Geometry, distance: pint.Quantity = None) -> Geometry
+                * {north_east_of}(geometry: shapely.Geometry, distance: pint.Quantity = None) -> Geometry
+                * {east_of}(geometry: shapely.Geometry, distance: pint.Quantity = None) -> Geometry
+                * {south_east_of}(geometry: shapely.Geometry, distance: pint.Quantity = None) -> Geometry
+                * {south_of}(geometry: shapely.Geometry, distance: pint.Quantity = None) -> Geometry
+                * {south_west_of}(geometry: shapely.Geometry, distance: pint.Quantity = None) -> Geometry
+                * {west_of}(geometry: shapely.Geometry, distance: pint.Quantity = None) -> Geometry
+                * {north_west_part_of}(geometry: shapely.Geometry) -> Geometry
+                * {north_part_of}(geometry: shapely.Geometry) -> Geometry
+                * {north_east_part_of}(geometry: shapely.Geometry) -> Geometry
+                * {east_part_of}(geometry: shapely.Geometry) -> Geometry
+                * {south_east_part_of}(geometry: shapely.Geometry) -> Geometry
+                * {south_part_of}(geometry: shapely.Geometry) -> Geometry
+                * {south_west_part_of}(geometry: shapely.Geometry) -> Geometry
+                * {west_part_of}(geometry: shapely.Geometry) -> Geometry
+                * Number * UNITS.km -> pint.Quantity
+                * Number * UNITS.miles -> pint.Quantity""".format(**self.function_names)))
 
-and the Geometry objects:
+    def user(self, text, objects):
+        return dict(
+            role='user',
+            content=textwrap.dedent(f"""\
+                Given the input text:
 
-{objects}
+                "{text}"
 
-Write a single line of Python code to calculate the Geometry of Y. Your code should use only the given Geometry objects, and should call only the normit library functions listed above."""
+                and the Geometry objects:
 
-sample_data = [
-    dict(text="Y is a circular mountain range in southern Waterford, 10 miles north of Martins Ferry.",
-         objects="waterford, martins_ferry",
-         response="""\
-Y = {intersection}(
-  # "a circular mountain range" is irrelevant to the geometry of Y
-  # "in southern Waterford" means:
-  {south_part_of}(waterford),
-  # "10 miles north of Martins Ferry" means:
-  {north_of}(martins_ferry, distance=10 * UNITS.miles),
-)
-"""),
-    dict(text="Y is between Garden City and Stanley, in Litchfield, 25 km south east of Bebington Vale. The north west of Y is rainy.",
-         objects="litchfield, garden_city, stanley, bebington_vale",
-         response="""\
-Y = {intersection}(
-  # "between Garden City and Stanley" means:
-  {between}(garden_city, stanley),
-  # "in Litchfield" means:
-  litchfield,
-  # "25 km south east of Bebington Vale" means:
-  {south_east_of}(bebington_vale, distance=25 * UNITS.km),
-  # "The north west of Y is rainy" is irrelevant to the geometry of Y
-)
-"""),
-]
+                {objects}
+
+                Write a single line of Python code to calculate the Geometry of Y. Your code should use only the given Geometry objects, and should call only the normit library functions listed above."""))
+
+    def assistant(self, response):
+        return dict(
+            role='assistant',
+            content=textwrap.dedent(response.format(**self.function_names)))
+
+    def prompt(self):
+        return [
+            self.system(),
+            self.user(
+                text="Y is a circular mountain range in southern Waterford, 10 miles north of Martins Ferry.",
+                objects="waterford, martins_ferry"),
+            self.assistant("""\
+                Y = {intersection}(
+                  # "a circular mountain range" is irrelevant to the geometry of Y
+                  # "in southern Waterford" means:
+                  {south_part_of}(waterford),
+                  # "10 miles north of Martins Ferry" means:
+                  {north_of}(martins_ferry, distance=10 * UNITS.miles),
+                )
+                """),
+            self.user(
+                text="Y is between Garden City and Stanley, in Litchfield, 25 km south east of Bebington Vale. The north west of Y is rainy.",
+                objects="litchfield, garden_city, stanley, bebington_vale"),
+            self.assistant("""\
+                Y = {intersection}(
+                  # "between Garden City and Stanley" means:
+                  {between}(garden_city, stanley),
+                  # "in Litchfield" means:
+                  litchfield,
+                  # "25 km south east of Bebington Vale" means:
+                  {south_east_of}(bebington_vale, distance=25 * UNITS.km),
+                  # "The north west of Y is rainy" is irrelevant to the geometry of Y
+                )
+                """),
+        ]
 
 
 @pytest.mark.skipif("not 'ollama' in config.getoption('keyword')")
@@ -124,13 +149,9 @@ def test_ollama_geocode_test(georeader: GeoJsonDirReader, score_logger):
     import ollama
     import simpleeval
 
-    # Select the model to evaluate
     model_name = 'llama3.2:3b'
-    # model_name = 'deepseek-r1:14b'
-
-    # Select the API style to evaluate
-    # ops_names = geo_ops_as_methods
-    ops_names = geo_ops_as_functions
+    # model_name='deepseek-r1:14b'
+    factory = GeoPromptFactory(call_style='function')
 
     def simplify_name(name):
         return re.sub(r'[\W_]+', '_', name).strip('_').lower()
@@ -140,12 +161,7 @@ def test_ollama_geocode_test(georeader: GeoJsonDirReader, score_logger):
                if name in normit.geo.ops.__all__}
 
     # assemble the chat history, with the task and the few-shot examples
-    messages = [dict(role='system', content=task.format(**ops_names))]
-    for datum in sample_data:
-        prompt = prompt_template.format(**ops_names | datum)
-        messages.append(dict(role='user', content=prompt))
-        response = datum['response'].format(**ops_names)
-        messages.append(dict(role='assistant', content=response))
+    messages = factory.prompt()
 
     print()
     for message in messages:
@@ -184,18 +200,17 @@ def test_ollama_geocode_test(georeader: GeoJsonDirReader, score_logger):
             continue
 
         # prepare the prompt for this example
-        datum = dict(text=text, objects=', '.join(references.keys()))
-        prompt = prompt_template.format(**ops_names | datum)
+        message = factory.user(text=text, objects=', '.join(references.keys()))
         print('='*50)
-        print('user')
+        print(message['role'])
         print('-'*50)
-        print(prompt)
+        print(message['content'])
 
         # ask the model to generate a response to the prompt
         response = ollama.chat(
             model_name,
             options=dict(temperature=0, num_predict=1000),
-            messages=messages + [{'role': 'user', 'content': prompt}],
+            messages=messages + [message],
         )
 
         # extract the code and run it
