@@ -32,7 +32,12 @@ geo_ops_functions = dict(
 
 
 class GeoPromptFactory:
-    def __init__(self, call_style):
+    def __init__(self,
+                 call_style: str,
+                 single_function_examples: bool,
+                 combo_function_examples: bool):
+        self.single_function_examples = single_function_examples
+        self.combo_function_examples = combo_function_examples
         match call_style:
             case "function":
                 self.function_names = {name: name for name in geo_ops_functions.keys()}
@@ -111,35 +116,80 @@ class GeoPromptFactory:
             content=textwrap.dedent(response.format(**self.function_names)))
 
     def prompt(self):
-        return [
-            self.system(),
-            self.user(
-                text="Y is a circular mountain range in southern Waterford, 10 miles north of Martins Ferry.",
-                objects="waterford, martins_ferry"),
-            self.assistant("""\
-                Y = {intersection}(
-                  # "a circular mountain range" is irrelevant to the geometry of Y
-                  # "in southern Waterford" means:
-                  {south_part_of}(waterford),
-                  # "10 miles north of Martins Ferry" means:
-                  {north_of}(martins_ferry, distance=10 * UNITS.miles),
-                )
-                """),
-            self.user(
-                text="Y is between Garden City and Stanley, in Litchfield, 25 km south east of Bebington Vale. The north west of Y is rainy.",
-                objects="litchfield, garden_city, stanley, bebington_vale"),
-            self.assistant("""\
-                Y = {intersection}(
-                  # "between Garden City and Stanley" means:
-                  {between}(garden_city, stanley),
-                  # "in Litchfield" means:
-                  litchfield,
-                  # "25 km south east of Bebington Vale" means:
-                  {south_east_of}(bebington_vale, distance=25 * UNITS.km),
-                  # "The north west of Y is rainy" is irrelevant to the geometry of Y
-                )
-                """),
-        ]
+        result = [self.system()]
+        if self.single_function_examples:
+            result.extend([
+                self.user(
+                    text="Y is in Alexandria, Beechworth.",
+                    objects="alexandria, beechworth"),
+                self.assistant("""\
+                    # "in Alexandria, Beechworth" means:
+                    Y = {intersection}(alexandria, beechworth)"""),
+                self.user(
+                    text="Y is near Seward.",
+                    objects="seward"),
+                self.assistant("""\
+                    # "near Seward" means:
+                    Y = {near}(seward)"""),
+                self.user(
+                    text="Y is 10 miles from Ferryhill.",
+                    objects="ferryhill"),
+                self.assistant("""\
+                    # "10 miles from Ferryhill" means:
+                    Y = {near}(ferryhill, distance=10 * UNITS.miles)"""),
+                self.user(
+                    text="Y is between Attle and Palmdale.",
+                    objects="attle, palmdale"),
+                self.assistant("""\
+                    # "between Attle and Palmdale" means:
+                    Y = {between}(attle, palmdale)"""),
+                self.user(
+                    text="Y is north of Cicero.",
+                    objects="cicero"),
+                self.assistant("""\
+                    # "north of Cicero" means:
+                    Y = {north_of}(cicero)"""),
+                self.user(
+                    text="Y is 5 km east of Bodmin.",
+                    objects="bodmin"),
+                self.assistant("""\
+                    # "5 km east of Bodmin" means:
+                    Y = {east_of}(bodmin, distance=5 * UNITS.km)"""),
+                self.user(
+                    text="Y is in southern Wembley.",
+                    objects="wembley"),
+                self.assistant("""\
+                    # "in southern Wembley" means:
+                    Y = {south_part_of}(wembley)"""),
+            ])
+        if self.combo_function_examples:
+            result.extend([
+                self.user(
+                    text="Y is a circular mountain range in southern Waterford, 10 miles north of Martins Ferry.",
+                    objects="waterford, martins_ferry"),
+                self.assistant("""\
+                    Y = {intersection}(
+                      # "a circular mountain range" is irrelevant to the geometry of Y
+                      # "in southern Waterford" means:
+                      {south_part_of}(waterford),
+                      # "10 miles north of Martins Ferry" means:
+                      {north_of}(martins_ferry, distance=10 * UNITS.miles),
+                    )"""),
+                self.user(
+                    text="Y is between Garden City and Stanley, in Litchfield, 25 km south east of Bebington Vale. The north west of Y is rainy.",
+                    objects="litchfield, garden_city, stanley, bebington_vale"),
+                self.assistant("""\
+                    Y = {intersection}(
+                      # "between Garden City and Stanley" means:
+                      {between}(garden_city, stanley),
+                      # "in Litchfield" means:
+                      litchfield,
+                      # "25 km south east of Bebington Vale" means:
+                      {south_east_of}(bebington_vale, distance=25 * UNITS.km),
+                      # "The north west of Y is rainy" is irrelevant to the geometry of Y
+                    )"""),
+            ])
+        return result
 
 
 @pytest.mark.skipif("not 'ollama' in config.getoption('keyword')")
@@ -151,7 +201,11 @@ def test_ollama_geocode_test(georeader: GeoJsonDirReader, score_logger):
 
     model_name = 'llama3.2:3b'
     # model_name='deepseek-r1:14b'
-    factory = GeoPromptFactory(call_style='function')
+    factory = GeoPromptFactory(
+        call_style='function',
+        single_function_examples=True,
+        combo_function_examples=False,
+    )
 
     def simplify_name(name):
         return re.sub(r'[\W_]+', '_', name).strip('_').lower()
@@ -212,17 +266,16 @@ def test_ollama_geocode_test(georeader: GeoJsonDirReader, score_logger):
             options=dict(temperature=0, num_predict=1000),
             messages=messages + [message],
         )
-
-        # extract the code and run it
-        flags = re.DOTALL | re.MULTILINE
-        matches = re.findall(r'^Y = (.*?^[)])$', response.message.content, flags)
+        code = response.message.content
         print('='*50)
         print('assistant')
         print('-'*50)
-        print(matches[-1] if matches else response.message.content)
+        print(code)
+
+        # run the code to calculate the predicted geometry
         try:
             prediction = simpleeval.simple_eval(
-                matches[-1],
+                response.message.content,
                 names=geo_ops | references,
                 functions=geo_ops_functions)
         except Exception:
@@ -231,4 +284,3 @@ def test_ollama_geocode_test(georeader: GeoJsonDirReader, score_logger):
             prediction = target.centroid
 
         score_logger.p_r_f1(target, prediction, target_name)
-        # show_plot(target, prediction)
