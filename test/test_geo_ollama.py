@@ -272,10 +272,13 @@ def test_ollama_geocode_test(georeader: GeoJsonDirReader, score_logger):
         print('-'*50)
         print(code)
 
+        # remove assignment, since simpleeval only does expressions
+        code = code.replace("Y = ", "")
+
         # run the code to calculate the predicted geometry
         try:
             prediction = simpleeval.simple_eval(
-                response.message.content,
+                code,
                 names=geo_ops | references,
                 functions=geo_ops_functions)
         except Exception:
