@@ -141,6 +141,7 @@ def test_between(georeader: GeoJsonDirReader):
     bw = georeader.read(1889339)  # Botswana
     zw = georeader.read(195272)  # Zimbabwe
     za = georeader.read(87565)  # South Africa
+    za_ru = georeader.read(30391973) # Rustenburg (a Point) in South Africa
 
     # Botswana is between Namibia and Zimbabwe
     assert Between.of(na, zw).intersection(bw).area > 0
@@ -151,6 +152,8 @@ def test_between(georeader: GeoJsonDirReader):
     # Botswana is between Namibia and South Africa
     assert Between.of(na, za).intersection(bw).area > 0
     assert Between.of(za, na).intersection(bw).area > 0
+    assert Between.of(na, za_ru).intersection(bw).area > 0
+    assert Between.of(za_ru, na).intersection(bw).area > 0
 
     # Namibia is not between South Africa and Zimbabwe
     assert Between.of(za, zw).intersection(na).area == 0

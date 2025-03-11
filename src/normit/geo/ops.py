@@ -131,7 +131,8 @@ class Between:
             geometry: shapely.geometry.base.BaseGeometry,
             distant_geometry: shapely.geometry.base.BaseGeometry
     ) -> shapely.LineString | shapely.MultiLineString:
-        if isinstance(geometry, shapely.LineString | shapely.MultiLineString):
+        if isinstance(geometry, shapely.Point | shapely.MultiPoint |
+                                shapely.LineString | shapely.MultiLineString):
             return geometry
         else:
             return _line_through_centroid_perpendicular_to_point(
