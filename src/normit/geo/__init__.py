@@ -41,7 +41,7 @@ class GeoJsonDirReader:
             if not isinstance(geom, _PolygonLike):
                 polygons, cuts, dangles, invalid = shapely.polygonize_full(
                     shapely.get_parts(geom))
-                if not cuts and not dangles and not invalid:
+                if not polygons.is_empty and cuts.is_empty and dangles.is_empty and invalid.is_empty:
                     geom = shapely.multipolygons(shapely.get_parts(polygons))
             results.append(geom)
         # skip the unnecessary union if there's only one result

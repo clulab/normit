@@ -1,4 +1,16 @@
+import shapely
+
 from normit.geo import *
+
+
+def test_reader(georeader: GeoJsonDirReader):
+    # node
+    kintbury = georeader.read(21517801)
+    assert isinstance(kintbury, shapely.Point)
+
+    # multipolygon stored as multiline string
+    za = georeader.read(87565)
+    assert isinstance(za, shapely.MultiPolygon)
 
 
 def test_inner_regions(georeader: GeoJsonDirReader):
