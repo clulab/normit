@@ -108,7 +108,7 @@ class GeoPromptFactory:
 
                 {objects}
 
-                Write a single line of Python code to calculate the Geometry of Y. Your code should use only the given Geometry objects, and should call only the normit library functions listed above."""))
+                Write Python code to calculate the Geometry of Y. Your code should use only the given Geometry objects, and should call only the normit library functions listed above. Write only a single line of code."""))
 
     def assistant(self, response):
         return dict(
