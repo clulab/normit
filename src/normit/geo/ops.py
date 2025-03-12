@@ -63,6 +63,10 @@ class GeoCardinal:
         return result.intersection(sector)
 
     def part_of(self, geometry: shapely.geometry.base.BaseGeometry):
+        # points cannot be divided into parts
+        if isinstance(geometry, shapely.Point | shapely.MultiPoint):
+            return geometry
+        # calculate diameter and centroid
         d = shapely.minimum_bounding_radius(geometry) * 2
         c = geometry.centroid
         # create point at azimuth 0 (North) and rotate (negative = clockwise)

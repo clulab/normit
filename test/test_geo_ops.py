@@ -31,6 +31,10 @@ def test_inner_regions(georeader: GeoJsonDirReader):
     assert NorthEast.part_of(india).intersection(gorakhpur).area > 0
     assert SouthWest.part_of(india).intersection(gorakhpur).area == 0
 
+    # SouthWest part of a point is the point
+    kintbury = georeader.read(21517801)
+    assert SouthWest.part_of(kintbury) == kintbury
+
 
 def test_outer_regions(georeader: GeoJsonDirReader):
     az = georeader.read(162018)
