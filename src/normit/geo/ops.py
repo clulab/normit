@@ -23,7 +23,8 @@ __all__ = [
     'NorthWest',
     'Near',
     'Between',
-    'Intersection'
+    'Intersection',
+    'Union',
 ]
 
 UNITS = pint.UnitRegistry()  #: TEST
@@ -149,6 +150,13 @@ class Intersection:
             -> shapely.geometry.base.BaseGeometry:
         smallest_first = sorted(geometries, key=lambda g: g.area)
         return shapely.intersection_all(smallest_first)
+
+
+class Union:
+    @staticmethod
+    def of(*geometries: shapely.geometry.base.BaseGeometry) \
+            -> shapely.geometry.base.BaseGeometry:
+        return shapely.union_all(geometries)
 
 
 def _line_through_centroid_perpendicular_to_point(
