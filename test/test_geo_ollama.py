@@ -34,10 +34,8 @@ geo_ops_functions = dict(
 class GeoPromptFactory:
     def __init__(self,
                  call_style: str,
-                 single_function_examples: bool,
-                 combo_function_examples: bool):
-        self.single_function_examples = single_function_examples
-        self.combo_function_examples = combo_function_examples
+                 example_style: str,
+                 example_location: str):
         match call_style:
             case "function":
                 self.function_names = {name: name for name in geo_ops_functions.keys()}
@@ -65,36 +63,153 @@ class GeoPromptFactory:
                 )
             case _:
                 raise NotImplementedError(call_style)
+        self.system_text = textwrap.dedent("""\
+            Use the normit.geo Python library, https://normit.readthedocs.io/, to calculate the shape of a geographical region.
+            The library operates over shapely Geometry objects and and pint Quantity objects.
+            The library provides the following functions:
 
-    def system(self):
-        return dict(
-            role='system',
-            content=textwrap.dedent("""\
-                Use the normit.geo Python library, https://normit.readthedocs.io/, to calculate the shape of a geographical region.
-                The library operates over shapely Geometry objects and and pint Quantity objects.
-                The library provides the following functions:
+            * {intersection}(*geometries: shapely.Geometry) -> Geometry
+            * {near}(geometry: shapely.Geometry, distance: pint.Quantity = None, radius: pint.Quantity = None) -> Geometry
+            * {between}(geometry1: shapely.Geometry, geometry2: shapely.Geometry) -> Geometry
+            * {north_west_of}(geometry: shapely.Geometry, distance: pint.Quantity = None) -> Geometry
+            * {north_of}(geometry: shapely.Geometry, distance: pint.Quantity = None) -> Geometry
+            * {north_east_of}(geometry: shapely.Geometry, distance: pint.Quantity = None) -> Geometry
+            * {east_of}(geometry: shapely.Geometry, distance: pint.Quantity = None) -> Geometry
+            * {south_east_of}(geometry: shapely.Geometry, distance: pint.Quantity = None) -> Geometry
+            * {south_of}(geometry: shapely.Geometry, distance: pint.Quantity = None) -> Geometry
+            * {south_west_of}(geometry: shapely.Geometry, distance: pint.Quantity = None) -> Geometry
+            * {west_of}(geometry: shapely.Geometry, distance: pint.Quantity = None) -> Geometry
+            * {north_west_part_of}(geometry: shapely.Geometry) -> Geometry
+            * {north_part_of}(geometry: shapely.Geometry) -> Geometry
+            * {north_east_part_of}(geometry: shapely.Geometry) -> Geometry
+            * {east_part_of}(geometry: shapely.Geometry) -> Geometry
+            * {south_east_part_of}(geometry: shapely.Geometry) -> Geometry
+            * {south_part_of}(geometry: shapely.Geometry) -> Geometry
+            * {south_west_part_of}(geometry: shapely.Geometry) -> Geometry
+            * {west_part_of}(geometry: shapely.Geometry) -> Geometry
+            * Number * UNITS.km -> pint.Quantity
+            * Number * UNITS.miles -> pint.Quantity""".format(**self.function_names))
+        match example_style:
+            case "single":
+                self.examples = [
+                    dict(
+                        text="Y is in Alexandria, Beechworth.",
+                        objects="alexandria, beechworth",
+                        code="""\
+                            # "in Alexandria, Beechworth" means:
+                            Y = {intersection}(alexandria, beechworth)"""),
+                    dict(
+                        text="Y is near Seward.",
+                        objects="seward",
+                        code="""\
+                            # "near Seward" means:
+                            Y = {near}(seward)"""),
+                    dict(
+                        text="Y is 10 miles from Ferryhill.",
+                        objects="ferryhill",
+                        code="""\
+                            # "10 miles from Ferryhill" means:
+                            Y = {near}(ferryhill, distance=10 * UNITS.miles)"""),
+                    dict(
+                        text="Y is between Attle and Palmdale.",
+                        objects="attle, palmdale",
+                        code="""\
+                            # "between Attle and Palmdale" means:
+                            Y = {between}(attle, palmdale)"""),
+                    dict(
+                        text="Y is north of Cicero.",
+                        objects="cicero",
+                        code="""\
+                            # "north of Cicero" means:
+                            Y = {north_of}(cicero)"""),
+                    dict(
+                        text="Y is 5 km east of Bodmin.",
+                        objects="bodmin",
+                        code="""\
+                            # "5 km east of Bodmin" means:
+                            Y = {east_of}(bodmin, distance=5 * UNITS.km)"""),
+                    dict(
+                        text="Y is in southern Wembley.",
+                        objects="wembley",
+                        code="""\
+                            # "in southern Wembley" means:
+                            Y = {south_part_of}(wembley)"""),
+                ]
+            case "multi":
+                self.examples = [
+                    dict(
+                        text="Y is a circular mountain range in southern Waterford, 10 miles north of Martins Ferry.",
+                        objects="waterford, martins_ferry",
+                        code="""\
+                            Y = {intersection}(
+                              # "a circular mountain range" is irrelevant to the geometry of Y
+                              # "in southern Waterford" means:
+                              {south_part_of}(waterford),
+                              # "10 miles north of Martins Ferry" means:
+                              {north_of}(martins_ferry, distance=10 * UNITS.miles),
+                            )"""),
+                    dict(
+                        text="Y is between Garden City and Stanley, in Litchfield, 25 km south east of Bebington Vale. The north west of Y is rainy.",
+                        objects="litchfield, garden_city, stanley, bebington_vale",
+                        code="""\
+                            Y = {intersection}(
+                              # "between Garden City and Stanley" means:
+                              {between}(garden_city, stanley),
+                              # "in Litchfield" means:
+                              litchfield,
+                              # "25 km south east of Bebington Vale" means:
+                              {south_east_of}(bebington_vale, distance=25 * UNITS.km),
+                              # "The north west of Y is rainy" is irrelevant to the geometry of Y
+                            )"""),
+                ]
+        for example in self.examples:
+            example['code'] = textwrap.dedent(
+                example['code'].format(**self.function_names))
 
-                * {intersection}(*geometries: shapely.Geometry) -> Geometry
-                * {near}(geometry: shapely.Geometry, distance: pint.Quantity = None, radius: pint.Quantity = None) -> Geometry
-                * {between}(geometry1: shapely.Geometry, geometry2: shapely.Geometry) -> Geometry
-                * {north_west_of}(geometry: shapely.Geometry, distance: pint.Quantity = None) -> Geometry
-                * {north_of}(geometry: shapely.Geometry, distance: pint.Quantity = None) -> Geometry
-                * {north_east_of}(geometry: shapely.Geometry, distance: pint.Quantity = None) -> Geometry
-                * {east_of}(geometry: shapely.Geometry, distance: pint.Quantity = None) -> Geometry
-                * {south_east_of}(geometry: shapely.Geometry, distance: pint.Quantity = None) -> Geometry
-                * {south_of}(geometry: shapely.Geometry, distance: pint.Quantity = None) -> Geometry
-                * {south_west_of}(geometry: shapely.Geometry, distance: pint.Quantity = None) -> Geometry
-                * {west_of}(geometry: shapely.Geometry, distance: pint.Quantity = None) -> Geometry
-                * {north_west_part_of}(geometry: shapely.Geometry) -> Geometry
-                * {north_part_of}(geometry: shapely.Geometry) -> Geometry
-                * {north_east_part_of}(geometry: shapely.Geometry) -> Geometry
-                * {east_part_of}(geometry: shapely.Geometry) -> Geometry
-                * {south_east_part_of}(geometry: shapely.Geometry) -> Geometry
-                * {south_part_of}(geometry: shapely.Geometry) -> Geometry
-                * {south_west_part_of}(geometry: shapely.Geometry) -> Geometry
-                * {west_part_of}(geometry: shapely.Geometry) -> Geometry
-                * Number * UNITS.km -> pint.Quantity
-                * Number * UNITS.miles -> pint.Quantity""".format(**self.function_names)))
+        match example_location:
+            case "system":
+                example_texts = []
+                for example in self.examples:
+                    example_texts.append(textwrap.dedent("""\
+                        Given the input text:
+
+                        "{text}"
+
+                        and the Geometry objects:
+
+                        {objects}
+
+                        the geometry of Y can be calculated with the following Python code:
+
+                        {code}""").format(**example))
+                self.messages = [
+                    dict(
+                        role='system',
+                        content=textwrap.dedent("""\
+                            {system}
+
+                            Here are some examples of using the library:
+
+                            {example_text}""").format(
+                                system=self.system_text,
+                                example_text='\n'.join(example_texts)))
+                ]
+            case "chat":
+                self.messages = [
+                    dict(
+                        role='system',
+                        content=self.system_text)
+                ]
+                for example in self.examples:
+                    self.messages.append(self.user(
+                        text=example['text'],
+                        objects=example['objects'],
+                    ))
+                    self.messages.append(dict(
+                        role='assistant',
+                        content=example['code']))
+            case _:
+                raise NotImplementedError(call_style)
 
     def user(self, text, objects):
         return dict(
@@ -110,86 +225,8 @@ class GeoPromptFactory:
 
                 Write Python code to calculate the Geometry of Y. Your code should use only the given Geometry objects, and should call only the normit library functions listed above. Write only a single line of code."""))
 
-    def assistant(self, response):
-        return dict(
-            role='assistant',
-            content=textwrap.dedent(response.format(**self.function_names)))
-
     def prompt(self):
-        result = [self.system()]
-        if self.single_function_examples:
-            result.extend([
-                self.user(
-                    text="Y is in Alexandria, Beechworth.",
-                    objects="alexandria, beechworth"),
-                self.assistant("""\
-                    # "in Alexandria, Beechworth" means:
-                    Y = {intersection}(alexandria, beechworth)"""),
-                self.user(
-                    text="Y is near Seward.",
-                    objects="seward"),
-                self.assistant("""\
-                    # "near Seward" means:
-                    Y = {near}(seward)"""),
-                self.user(
-                    text="Y is 10 miles from Ferryhill.",
-                    objects="ferryhill"),
-                self.assistant("""\
-                    # "10 miles from Ferryhill" means:
-                    Y = {near}(ferryhill, distance=10 * UNITS.miles)"""),
-                self.user(
-                    text="Y is between Attle and Palmdale.",
-                    objects="attle, palmdale"),
-                self.assistant("""\
-                    # "between Attle and Palmdale" means:
-                    Y = {between}(attle, palmdale)"""),
-                self.user(
-                    text="Y is north of Cicero.",
-                    objects="cicero"),
-                self.assistant("""\
-                    # "north of Cicero" means:
-                    Y = {north_of}(cicero)"""),
-                self.user(
-                    text="Y is 5 km east of Bodmin.",
-                    objects="bodmin"),
-                self.assistant("""\
-                    # "5 km east of Bodmin" means:
-                    Y = {east_of}(bodmin, distance=5 * UNITS.km)"""),
-                self.user(
-                    text="Y is in southern Wembley.",
-                    objects="wembley"),
-                self.assistant("""\
-                    # "in southern Wembley" means:
-                    Y = {south_part_of}(wembley)"""),
-            ])
-        if self.combo_function_examples:
-            result.extend([
-                self.user(
-                    text="Y is a circular mountain range in southern Waterford, 10 miles north of Martins Ferry.",
-                    objects="waterford, martins_ferry"),
-                self.assistant("""\
-                    Y = {intersection}(
-                      # "a circular mountain range" is irrelevant to the geometry of Y
-                      # "in southern Waterford" means:
-                      {south_part_of}(waterford),
-                      # "10 miles north of Martins Ferry" means:
-                      {north_of}(martins_ferry, distance=10 * UNITS.miles),
-                    )"""),
-                self.user(
-                    text="Y is between Garden City and Stanley, in Litchfield, 25 km south east of Bebington Vale. The north west of Y is rainy.",
-                    objects="litchfield, garden_city, stanley, bebington_vale"),
-                self.assistant("""\
-                    Y = {intersection}(
-                      # "between Garden City and Stanley" means:
-                      {between}(garden_city, stanley),
-                      # "in Litchfield" means:
-                      litchfield,
-                      # "25 km south east of Bebington Vale" means:
-                      {south_east_of}(bebington_vale, distance=25 * UNITS.km),
-                      # "The north west of Y is rainy" is irrelevant to the geometry of Y
-                    )"""),
-            ])
-        return result
+        return self.messages
 
 
 @pytest.mark.skipif("not 'ollama' in config.getoption('keyword')")
@@ -203,8 +240,8 @@ def test_ollama_geocode_test(georeader: GeoJsonDirReader, score_logger):
     # model_name='deepseek-r1:14b'
     factory = GeoPromptFactory(
         call_style='function',
-        single_function_examples=True,
-        combo_function_examples=False,
+        example_style='single',
+        example_location='chat',
     )
 
     def simplify_name(name):
@@ -271,6 +308,13 @@ def test_ollama_geocode_test(georeader: GeoJsonDirReader, score_logger):
         print('assistant')
         print('-'*50)
         print(code)
+
+        # remove code block markup
+        index = code.rfind('```')
+        if code.count('```') >= 2 and index > 0:
+            code = code[:index]
+        code = code.replace('```python', '')
+        code = code.replace('```', '')
 
         # remove assignment, since simpleeval only does expressions
         code = code.replace("Y = ", "")
