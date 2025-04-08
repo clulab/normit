@@ -35,8 +35,9 @@ geo_ops_functions = dict(
 class GeoPromptFactory:
     def __init__(self,
                  call_style: str,
+                 example_location: str,
                  example_style: str,
-                 example_location: str):
+                 code_block_style: str):
         match call_style:
             case "function":
                 self.function_names = {name: name for name in geo_ops_functions.keys()}
@@ -164,9 +165,14 @@ class GeoPromptFactory:
                             )"""),
                 ]
         for example in self.examples:
-            example['code'] = textwrap.dedent(
-                example['code'].format(**self.function_names))
-
+            code = textwrap.dedent(example['code'].format(**self.function_names))
+            match code_block_style:
+                case 'ticks':
+                    example['code'] = f'```python\n{code}\n```'
+                case 'none':
+                    example['code'] = code
+                case _:
+                    raise NotImplementedError(code_block_style)
         match example_location:
             case "system":
                 example_texts = []
@@ -241,8 +247,9 @@ def test_ollama_geocode_test(georeader: GeoJsonDirReader, score_logger):
     model_name = os.environ["MODEL"]  # llama3.2:3b qwen2.5:14b
     factory = GeoPromptFactory(
         call_style=os.environ['CALL_STYLE'],
-        example_style=os.environ['EXAMPLE_STYLE'],
         example_location=os.environ['EXAMPLE_LOCATION'],
+        example_style=os.environ['EXAMPLE_STYLE'],
+        code_block_style=os.environ['CODE_BLOCK_STYLE'],
     )
 
     def simplify_name(name):
@@ -315,7 +322,7 @@ def test_ollama_geocode_test(georeader: GeoJsonDirReader, score_logger):
         if last_code_block_end > 0:
             code = code[:last_code_block_end]
         last_code_block_start = code.rfind('```')
-        if last_code_block_start > 0:
+        if last_code_block_start >= 0:
             code = code[last_code_block_start:]
             code = code.replace('```python', '')
             code = code.replace('```', '')
