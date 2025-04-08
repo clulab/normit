@@ -140,28 +140,38 @@ class GeoPromptFactory:
             case "multi":
                 self.examples = [
                     dict(
-                        text="Y is a circular mountain range in southern Waterford, 10 miles north of Martins Ferry.",
-                        objects="waterford, martins_ferry",
+                        text="Y is in Alexandria, Beechworth, near Seward.",
+                        objects="alexandria, beechworth, seward",
                         code="""\
                             Y = {intersection}(
-                              # "a circular mountain range" is irrelevant to the geometry of Y
-                              # "in southern Waterford" means:
-                              {south_part_of}(waterford),
-                              # "10 miles north of Martins Ferry" means:
-                              {north_of}(martins_ferry, distance=10 * UNITS.miles),
+                                # "Alexandria" means:
+                                alexandria,
+                                # "Beechworth" means:
+                                beechworth,
+                                "near Seward" means:
+                                {near}(seward),
                             )"""),
                     dict(
-                        text="Y is between Garden City and Stanley, in Litchfield, 25 km south east of Bebington Vale. The north west of Y is rainy.",
-                        objects="litchfield, garden_city, stanley, bebington_vale",
+                        text="Y is 10 miles from Ferryhill, between Attle and Palmdale.",
+                        objects="ferryhill, attle, palmdale",
                         code="""\
                             Y = {intersection}(
-                              # "between Garden City and Stanley" means:
-                              {between}(garden_city, stanley),
-                              # "in Litchfield" means:
-                              litchfield,
-                              # "25 km south east of Bebington Vale" means:
-                              {south_east_of}(bebington_vale, distance=25 * UNITS.km),
-                              # "The north west of Y is rainy" is irrelevant to the geometry of Y
+                                # "10 miles from Ferryhill" means:
+                                {near}(ferryhill, distance=10 * UNITS.miles)
+                                # "between Attle and Palmdale" means:
+                                {between}(attle, palmdale),
+                            )"""),
+                    dict(
+                        text="Y is north of Cicero, 5 km east of Bodmin, in southern Wembley.",
+                        objects="cicero, bodmin, wembley",
+                        code="""\
+                            Y = {intersection}(
+                                # "north of Cicero" means:
+                                {north_of}(cicero),
+                                # "5 km east of Bodmin" means:
+                                {east_of}(bodmin, distance=5 * UNITS.km),
+                                # "in southern Wembley" means:
+                                {south_part_of}(wembley),
                             )"""),
                 ]
         for example in self.examples:
