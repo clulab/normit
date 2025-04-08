@@ -1,3 +1,4 @@
+import os
 import pathlib
 import pytest
 import xml.etree.ElementTree as et
@@ -181,7 +182,8 @@ class GeoPromptFactory:
 
                         the geometry of Y can be calculated with the following Python code:
 
-                        {code}""").format(**example))
+                        {code}
+                        """).format(**example))
                 self.messages = [
                     dict(
                         role='system',
@@ -236,12 +238,11 @@ def test_ollama_geocode_test(georeader: GeoJsonDirReader, score_logger):
     import ollama
     import simpleeval
 
-    model_name = 'llama3.2:3b'
-    # model_name='deepseek-r1:14b'
+    model_name = os.environ["MODEL"]  # llama3.2:3b qwen2.5:14b
     factory = GeoPromptFactory(
-        call_style='function',
-        example_style='single',
-        example_location='chat',
+        call_style=os.environ['CALL_STYLE'],
+        example_style=os.environ['EXAMPLE_STYLE'],
+        example_location=os.environ['EXAMPLE_LOCATION'],
     )
 
     def simplify_name(name):
@@ -310,11 +311,14 @@ def test_ollama_geocode_test(georeader: GeoJsonDirReader, score_logger):
         print(code)
 
         # remove code block markup
-        index = code.rfind('```')
-        if code.count('```') >= 2 and index > 0:
-            code = code[:index]
-        code = code.replace('```python', '')
-        code = code.replace('```', '')
+        last_code_block_end = code.rfind('```')
+        if last_code_block_end > 0:
+            code = code[:last_code_block_end]
+        last_code_block_start = code.rfind('```')
+        if last_code_block_start > 0:
+            code = code[last_code_block_start:]
+            code = code.replace('```python', '')
+            code = code.replace('```', '')
 
         # remove assignment, since simpleeval only does expressions
         code = code.replace("Y = ", "")
