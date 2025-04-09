@@ -166,12 +166,12 @@ def test_between(georeader: GeoJsonDirReader):
 
 def test_union_intersection(georeader: GeoJsonDirReader):
     jp = georeader.read(382313)  # Japan
-    to = georeader.read(1543125)  # Tokyo
+    os = georeader.read(358674)  # Osaka
     kr = georeader.read(307756)  # South Korea
     se = georeader.read(2297418)  # Seoul
 
     assert Intersection.of(jp, kr).area == 0
-    assert shapely.equals(Intersection.of(jp, to), to)
+    assert shapely.equals(Intersection.of(jp, os), os)
     assert shapely.equals(Intersection.of(kr, se), se)
 
     assert shapely.equals(Union.of(jp, kr).intersection(jp), jp)
