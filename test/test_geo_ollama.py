@@ -356,7 +356,11 @@ def test_ollama_geocode_test(georeader: GeoJsonDirReader, score_logger):
                 functions=geo_ops_functions)
         except Exception:
             print(traceback.format_exc())
-            # make a prediction with 0 area so 0 precision and recall are logged
+            prediction = None
+
+        # replace an empty prediction with one of 0 area so scores are logged
+        if prediction is None:
             prediction = target.centroid
 
+        # log the scores
         score_logger.p_r_f1(target, prediction, target_name)
