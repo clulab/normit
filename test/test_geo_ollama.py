@@ -254,7 +254,15 @@ def test_ollama_geocode_test(georeader: GeoJsonDirReader, score_logger):
     import ollama
     import simpleeval
 
-    model_name = os.environ["MODEL"]  # llama3.2:3b qwen2.5:14b
+    # error out if parameters have not been set in the environment
+    assert 'MODEL' in os.environ   # e.g., lama3.2:3b, qwen3:4b-instruct, gemma3:4b, gpt-oss:20b
+    assert os.environ.get('CALL_STYLE') in ('function', 'classmethod')
+    assert os.environ.get('EXAMPLE_LOCATION') in ('system', 'chat')
+    assert os.environ.get('EXAMPLE_STYLE') in ('single', 'multi')
+    assert os.environ.get('CODE_BLOCK_STYLE') in ('ticks', 'none')
+
+    # initialize the prompt factory from the environment variables
+    model_name = os.environ["MODEL"]
     factory = GeoPromptFactory(
         call_style=os.environ['CALL_STYLE'],
         example_location=os.environ['EXAMPLE_LOCATION'],
