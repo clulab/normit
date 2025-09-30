@@ -3,6 +3,7 @@ import pathlib
 import pytest
 import xml.etree.ElementTree as et
 import re
+import subprocess
 import textwrap
 import traceback
 
@@ -212,7 +213,7 @@ class GeoPromptFactory:
                                 system=self.system_text,
                                 example_text='\n'.join(example_texts)))
                 ]
-            case "chat":
+            case "chat" | "fine-tune":
                 self.messages = [
                     dict(
                         role='system',
@@ -253,21 +254,28 @@ def test_ollama_geocode_test(georeader: GeoJsonDirReader, score_logger):
     # import locally, as these are not yet required for the rest of the library
     import ollama
     import simpleeval
+    import transformers
+    import trl
+    import datasets
 
     # error out if parameters have not been set in the environment
-    assert 'MODEL' in os.environ   # e.g., lama3.2:3b, qwen3:4b-instruct, gemma3:4b, gpt-oss:20b
-    assert os.environ.get('CALL_STYLE') in ('function', 'classmethod')
-    assert os.environ.get('EXAMPLE_LOCATION') in ('system', 'chat')
-    assert os.environ.get('EXAMPLE_STYLE') in ('single', 'multi')
-    assert os.environ.get('CODE_BLOCK_STYLE') in ('ticks', 'none')
+    assert 'MODEL' in os.environ   # e.g., lama3.2:3b, qwen3:4b-instruct, gemma3:4b, gpt-oss:20b, qwen3:0.6b
+    call_style = os.environ.get('CALL_STYLE')
+    assert call_style in ('function', 'classmethod')
+    example_location = os.environ.get('EXAMPLE_LOCATION')
+    assert example_location in ('system', 'chat', 'fine-tune')
+    example_style = os.environ.get('EXAMPLE_STYLE')
+    assert example_style in ('single', 'multi')
+    code_block_style = os.environ.get('CODE_BLOCK_STYLE')
+    assert code_block_style in ('ticks', 'none')
 
     # initialize the prompt factory from the environment variables
     model_name = os.environ["MODEL"]
     factory = GeoPromptFactory(
-        call_style=os.environ['CALL_STYLE'],
-        example_location=os.environ['EXAMPLE_LOCATION'],
-        example_style=os.environ['EXAMPLE_STYLE'],
-        code_block_style=os.environ['CODE_BLOCK_STYLE'],
+        call_style=call_style,
+        example_location=example_location,
+        example_style=example_style,
+        code_block_style=code_block_style,
     )
 
     def simplify_name(name):
@@ -279,13 +287,38 @@ def test_ollama_geocode_test(georeader: GeoJsonDirReader, score_logger):
 
     # assemble the chat history, with the task and the few-shot examples
     messages = factory.prompt()
-
     print()
     for message in messages:
         print('='*50)
         print(message['role'])
         print('-'*50)
         print(message['content'])
+
+    if example_location == 'fine-tune':
+        assert 'LLAMA_CPP_BIN' in os.environ
+        assert model_name.startswith('hf.co/')
+        model_id = model_name[6:]
+
+        modelfile_text = subprocess.check_output(['ollama', 'show', '--modelfile', model_name], encoding='ascii')
+        [old_gguf_path] = re.findall(r'^FROM (.+)$', modelfile_text, flags=re.MULTILINE)
+        tokenizer = transformers.AutoTokenizer.from_pretrained(model_id, gguf_file=old_gguf_path)
+        model = transformers.AutoModel.from_pretrained(model_id, gguf_file=old_gguf_path)
+        dataset = datasets.Dataset.from_list([{"messages": messages}])
+        dataset = dataset.map(trl.apply_chat_template, fn_kwargs={"tokenizer": tokenizer})
+        print(dataset[0]['text'])
+        trainer = trl.SFTTrainer(model=model, train_dataset=dataset)
+        trainer.train()
+
+        model_name = f"{model_name}-geocode-{call_style}-{example_style}-{code_block_style}"
+        trainer.save_model(model_name)
+        tokenizer.save_pretrained(model_name)
+        gguf_path = model_name + ".gguf"
+        modelfile_path = model_name + ".modelfile"
+        subprocess.run([os.environ['LLAMA_CPP_BIN'] + '/convert_hf_to_gguf.py', model_name, '--outfile', gguf_path], check=True)
+        with open(modelfile_path, "w") as f:
+            f.write(modelfile_text.replace(old_gguf_path, gguf_path))
+        subprocess.run(['ollama', 'create', model_name, '-f', modelfile_path], check=True)
+
 
     # evaluate the prompt + model on the GeoCoDe test data
     tree = et.parse(pathlib.Path(__file__).parent / "data" / "geocode_test.xml")
