@@ -296,25 +296,36 @@ def test_ollama_geocode_test(georeader: GeoJsonDirReader, score_logger):
 
     if example_location == 'fine-tune':
         assert 'LLAMA_CPP_BIN' in os.environ
-        assert model_name.startswith('hf.co/')
-        model_id = model_name[6:]
 
+        # to align Hugging Face and Ollama model names, only allow -GGUF models
+        assert model_name.startswith('hf.co/') and model_name.endswith('-GGUF')
+        hf_model_id = model_name[6:-5]
+
+        # read the Ollama model file to determine the original GGUF model path
         modelfile_text = subprocess.check_output(['ollama', 'show', '--modelfile', model_name], encoding='ascii')
         [old_gguf_path] = re.findall(r'^FROM (.+)$', modelfile_text, flags=re.MULTILINE)
-        tokenizer = transformers.AutoTokenizer.from_pretrained(model_id, gguf_file=old_gguf_path)
-        model = transformers.AutoModel.from_pretrained(model_id, gguf_file=old_gguf_path)
+
+        # convert the chat into training data
+        tokenizer = transformers.AutoTokenizer.from_pretrained(hf_model_id)
         dataset = datasets.Dataset.from_list([{"messages": messages}])
         dataset = dataset.map(trl.apply_chat_template, fn_kwargs={"tokenizer": tokenizer})
         print(dataset[0]['text'])
-        trainer = trl.SFTTrainer(model=model, train_dataset=dataset)
+
+        # fine-tune the model on the chat
+        trainer = trl.SFTTrainer(model=hf_model_id, train_dataset=dataset, args=trl.SFTConfig(num_train_epochs=10))
         trainer.train()
 
-        model_name = f"{model_name}-geocode-{call_style}-{example_style}-{code_block_style}"
+        # save the Hugging Face model and tokenizer
+        model_name = f"{model_name.replace('/', '-')}-geocode-{call_style}-{example_style}-{code_block_style}"
         trainer.save_model(model_name)
         tokenizer.save_pretrained(model_name)
+
+        # convert the Hugging Face model to GGUF
         gguf_path = model_name + ".gguf"
         modelfile_path = model_name + ".modelfile"
         subprocess.run([os.environ['LLAMA_CPP_BIN'] + '/convert_hf_to_gguf.py', model_name, '--outfile', gguf_path], check=True)
+
+        # create an Ollama model from the GGUF file
         with open(modelfile_path, "w") as f:
             f.write(modelfile_text.replace(old_gguf_path, gguf_path))
         subprocess.run(['ollama', 'create', model_name, '-f', modelfile_path], check=True)
