@@ -213,7 +213,7 @@ class GeoPromptFactory:
                                 system=self.system_text,
                                 example_text='\n'.join(example_texts)))
                 ]
-            case "chat" | "fine-tune":
+            case "chat":
                 self.messages = [
                     dict(
                         role='system',
@@ -248,8 +248,7 @@ class GeoPromptFactory:
         return self.messages
 
 
-@pytest.mark.skipif("not 'llm' in config.getoption('keyword')")
-def test_llm_geocode_test(georeader: GeoJsonDirReader, score_logger):
+def test_llm_geocode_test(georeader: GeoJsonDirReader, score_logger, llm_options):
 
     # import locally, as these are not yet required for the rest of the library
     import ollama
@@ -259,18 +258,23 @@ def test_llm_geocode_test(georeader: GeoJsonDirReader, score_logger):
     import datasets
 
     # error out if parameters have not been set in the environment
-    assert 'MODEL' in os.environ   # e.g., lama3.2:3b, qwen3:4b-instruct, gemma3:4b, gpt-oss:20b, qwen3:0.6b
-    call_style = os.environ.get('CALL_STYLE')
+    assert 'model' in llm_options   # e.g., lama3.2:3b, qwen3:4b-instruct, gemma3:4b, gpt-oss:20b, qwen3:0.6b
+    model_name = llm_options["model"]
+    call_style = llm_options.get('call-style')
     assert call_style in ('function', 'classmethod')
-    example_location = os.environ.get('EXAMPLE_LOCATION')
-    assert example_location in ('system', 'chat', 'fine-tune')
-    example_style = os.environ.get('EXAMPLE_STYLE')
+    example_location = llm_options.get('example-location')
+    assert example_location in ('system', 'chat')
+    example_style = llm_options.get('example-style')
     assert example_style in ('single', 'multi')
-    code_block_style = os.environ.get('CODE_BLOCK_STYLE')
+    code_block_style = llm_options.get('code-block-style')
     assert code_block_style in ('ticks', 'none')
+    fine_tune_model = llm_options.get('fine-tune')
+    if fine_tune_model is not None:
+        llama_cpp_bin_dir = llm_options.get('llama-cpp-bin')
+        assert llama_cpp_bin_dir is not None
+
 
     # initialize the prompt factory from the environment variables
-    model_name = os.environ["MODEL"]
     factory = GeoPromptFactory(
         call_style=call_style,
         example_location=example_location,
@@ -294,25 +298,21 @@ def test_llm_geocode_test(georeader: GeoJsonDirReader, score_logger):
         print('-'*50)
         print(message['content'])
 
-    if example_location == 'fine-tune':
-        assert 'LLAMA_CPP_BIN' in os.environ
-
-        # to align Hugging Face and Ollama model names, only allow -GGUF models
-        assert model_name.startswith('hf.co/') and model_name.endswith('-GGUF')
-        hf_model_id = model_name[6:-5]
+    # fine-tune the model on the few-shot examples, if requested
+    if fine_tune_model is not None:
 
         # read the Ollama model file to determine the original GGUF model path
-        modelfile_text = subprocess.check_output(['ollama', 'show', '--modelfile', model_name], encoding='ascii')
+        modelfile_text = subprocess.check_output(['ollama', 'show', '--modelfile', model_name], encoding='utf8')
         [old_gguf_path] = re.findall(r'^FROM (.+)$', modelfile_text, flags=re.MULTILINE)
 
         # convert the chat into training data
-        tokenizer = transformers.AutoTokenizer.from_pretrained(hf_model_id)
+        tokenizer = transformers.AutoTokenizer.from_pretrained(fine_tune_model)
         dataset = datasets.Dataset.from_list([{"messages": messages}])
         dataset = dataset.map(trl.apply_chat_template, fn_kwargs={"tokenizer": tokenizer})
-        print(dataset[0]['text'])
 
         # fine-tune the model on the chat
-        trainer = trl.SFTTrainer(model=hf_model_id, train_dataset=dataset, args=trl.SFTConfig(num_train_epochs=10))
+        args = trl.SFTConfig(num_train_epochs=3)
+        trainer = trl.SFTTrainer(model=fine_tune_model, train_dataset=dataset, args=args)
         trainer.train()
 
         # save the Hugging Face model and tokenizer
@@ -323,13 +323,12 @@ def test_llm_geocode_test(georeader: GeoJsonDirReader, score_logger):
         # convert the Hugging Face model to GGUF
         gguf_path = model_name + ".gguf"
         modelfile_path = model_name + ".modelfile"
-        subprocess.run([os.environ['LLAMA_CPP_BIN'] + '/convert_hf_to_gguf.py', model_name, '--outfile', gguf_path], check=True)
+        subprocess.run([f'{llama_cpp_bin_dir}/convert_hf_to_gguf.py', model_name, '--outfile', gguf_path], check=True)
 
         # create an Ollama model from the GGUF file
         with open(modelfile_path, "w") as f:
             f.write(modelfile_text.replace(old_gguf_path, gguf_path))
         subprocess.run(['ollama', 'create', model_name, '-f', modelfile_path], check=True)
-
 
     # evaluate the prompt + model on the GeoCoDe test data
     tree = et.parse(pathlib.Path(__file__).parent / "data" / "geocode_test.xml")

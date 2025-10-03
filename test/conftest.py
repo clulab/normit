@@ -6,10 +6,12 @@ import shapely.ops
 
 
 GEOJSON_OPTION = "--geojson-dir"
+LLM_OPTION = "--llm"
 
 
 def pytest_addoption(parser):
     parser.addoption(GEOJSON_OPTION, help="Directory containing GeoJson files")
+    parser.addoption(LLM_OPTION, nargs='+', help="LLM options, e.g., `model=llama3.2:3b call-style=chat`")
 
 
 @pytest.fixture
@@ -18,6 +20,14 @@ def georeader(request):
     if geojson_dir is None:
         geojson_dir = pathlib.Path(__file__).parent / "data" / "openstreetmap"
     return normit.geo.GeoJsonDirReader(geojson_dir)
+
+
+@pytest.fixture
+def llm_options(request):
+    option_strs = request.config.getoption(LLM_OPTION)
+    if option_strs is None:
+        pytest.skip("No LLM specified")
+    return dict(option.split('=') for option in option_strs)
 
 
 class ScoreLogger:
