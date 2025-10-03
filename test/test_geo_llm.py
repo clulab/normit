@@ -248,8 +248,8 @@ class GeoPromptFactory:
         return self.messages
 
 
-@pytest.mark.skipif("not 'ollama' in config.getoption('keyword')")
-def test_ollama_geocode_test(georeader: GeoJsonDirReader, score_logger):
+@pytest.mark.skipif("not 'llm' in config.getoption('keyword')")
+def test_llm_geocode_test(georeader: GeoJsonDirReader, score_logger):
 
     # import locally, as these are not yet required for the rest of the library
     import ollama
