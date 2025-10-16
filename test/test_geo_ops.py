@@ -116,6 +116,10 @@ def test_outer_regions(georeader: GeoJsonDirReader):
     albuquerque = georeader.read(171262)
     assert Near.to(colorado_river).intersection(albuquerque).area == 0
 
+    # near to Copenhagen central station contains the station
+    copenhagen_central_station = georeader.read(3739700410, 5096749954, 91260821)
+    assert Near.to(copenhagen_central_station).intersection(copenhagen_central_station).area > 0
+
 
 def test_distance(georeader: GeoJsonDirReader):
     de = georeader.read(51477)

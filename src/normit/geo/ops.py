@@ -101,11 +101,15 @@ class Near:
         # project to UTM where we can measure distance in meters
         proj = utm_proj(geometry)
         geometry = shapely.ops.transform(proj, geometry)
-        # if no radius is specified, infer it from the geometry's area
-        if radius is None:
-            radius_m = _radius_by_area_in_meters(geometry)
-        else:
+        # if radius is specified, convert it to meters
+        if radius is not None:
             radius_m = radius.to(UNITS.meter).magnitude
+        # if no radius is specified, infer it from the geometry's area
+        elif geometry.boundary is not None:
+            radius_m = _radius_by_area_in_meters(geometry)
+        # if no radius can be inferred (e.g., a linestring), assume 1km
+        else:
+            radius_m = 1000
         # if no distance is specified, buffer by one radius
         if distance is None:
             result = geometry.buffer(radius_m)
