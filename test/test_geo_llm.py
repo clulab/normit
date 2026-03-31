@@ -92,89 +92,96 @@ class GeoPromptFactory:
             * {west_part_of}(geometry: shapely.Geometry) -> Geometry
             * Number * UNITS.km -> pint.Quantity
             * Number * UNITS.miles -> pint.Quantity""".format(**self.function_names))
+
+        self.single_examples = [
+            dict(
+                text="Y is in Alexandria, Beechworth.",
+                objects="alexandria, beechworth",
+                code="""\
+                    # "in Alexandria, Beechworth" means:
+                    Y = {intersection}(alexandria, beechworth)"""),
+            dict(
+                text="Y is near Seward.",
+                objects="seward",
+                code="""\
+                    # "near Seward" means:
+                    Y = {near}(seward)"""),
+            dict(
+                text="Y is 10 miles from Ferryhill.",
+                objects="ferryhill",
+                code="""\
+                    # "10 miles from Ferryhill" means:
+                    Y = {near}(ferryhill, distance=10 * UNITS.miles)"""),
+            dict(
+                text="Y is between Attle and Palmdale.",
+                objects="attle, palmdale",
+                code="""\
+                    # "between Attle and Palmdale" means:
+                    Y = {between}(attle, palmdale)"""),
+            dict(
+                text="Y is north of Cicero.",
+                objects="cicero",
+                code="""\
+                    # "north of Cicero" means:
+                    Y = {north_of}(cicero)"""),
+            dict(
+                text="Y is 5 km east of Bodmin.",
+                objects="bodmin",
+                code="""\
+                    # "5 km east of Bodmin" means:
+                    Y = {east_of}(bodmin, distance=5 * UNITS.km)"""),
+            dict(
+                text="Y is in southern Wembley.",
+                objects="wembley",
+                code="""\
+                    # "in southern Wembley" means:
+                    Y = {south_part_of}(wembley)"""),
+        ]
+        self.multi_examples = [
+            dict(
+                text="Y is in Alexandria, Beechworth, near Seward.",
+                objects="alexandria, beechworth, seward",
+                code="""\
+                    Y = {intersection}(
+                        # "Alexandria" means:
+                        alexandria,
+                        # "Beechworth" means:
+                        beechworth,
+                        "near Seward" means:
+                        {near}(seward),
+                    )"""),
+            dict(
+                text="Y is 10 miles from Ferryhill, between Attle and Palmdale.",
+                objects="ferryhill, attle, palmdale",
+                code="""\
+                    Y = {intersection}(
+                        # "10 miles from Ferryhill" means:
+                        {near}(ferryhill, distance=10 * UNITS.miles)
+                        # "between Attle and Palmdale" means:
+                        {between}(attle, palmdale),
+                    )"""),
+            dict(
+                text="Y is north of Cicero, 5 km east of Bodmin, in southern Wembley.",
+                objects="cicero, bodmin, wembley",
+                code="""\
+                    Y = {intersection}(
+                        # "north of Cicero" means:
+                        {north_of}(cicero),
+                        # "5 km east of Bodmin" means:
+                        {east_of}(bodmin, distance=5 * UNITS.km),
+                        # "in southern Wembley" means:
+                        {south_part_of}(wembley),
+                    )"""),
+        ]
+
         match example_style:
             case "single":
-                self.examples = [
-                    dict(
-                        text="Y is in Alexandria, Beechworth.",
-                        objects="alexandria, beechworth",
-                        code="""\
-                            # "in Alexandria, Beechworth" means:
-                            Y = {intersection}(alexandria, beechworth)"""),
-                    dict(
-                        text="Y is near Seward.",
-                        objects="seward",
-                        code="""\
-                            # "near Seward" means:
-                            Y = {near}(seward)"""),
-                    dict(
-                        text="Y is 10 miles from Ferryhill.",
-                        objects="ferryhill",
-                        code="""\
-                            # "10 miles from Ferryhill" means:
-                            Y = {near}(ferryhill, distance=10 * UNITS.miles)"""),
-                    dict(
-                        text="Y is between Attle and Palmdale.",
-                        objects="attle, palmdale",
-                        code="""\
-                            # "between Attle and Palmdale" means:
-                            Y = {between}(attle, palmdale)"""),
-                    dict(
-                        text="Y is north of Cicero.",
-                        objects="cicero",
-                        code="""\
-                            # "north of Cicero" means:
-                            Y = {north_of}(cicero)"""),
-                    dict(
-                        text="Y is 5 km east of Bodmin.",
-                        objects="bodmin",
-                        code="""\
-                            # "5 km east of Bodmin" means:
-                            Y = {east_of}(bodmin, distance=5 * UNITS.km)"""),
-                    dict(
-                        text="Y is in southern Wembley.",
-                        objects="wembley",
-                        code="""\
-                            # "in southern Wembley" means:
-                            Y = {south_part_of}(wembley)"""),
-                ]
+                self.examples = self.single_examples
             case "multi":
-                self.examples = [
-                    dict(
-                        text="Y is in Alexandria, Beechworth, near Seward.",
-                        objects="alexandria, beechworth, seward",
-                        code="""\
-                            Y = {intersection}(
-                                # "Alexandria" means:
-                                alexandria,
-                                # "Beechworth" means:
-                                beechworth,
-                                "near Seward" means:
-                                {near}(seward),
-                            )"""),
-                    dict(
-                        text="Y is 10 miles from Ferryhill, between Attle and Palmdale.",
-                        objects="ferryhill, attle, palmdale",
-                        code="""\
-                            Y = {intersection}(
-                                # "10 miles from Ferryhill" means:
-                                {near}(ferryhill, distance=10 * UNITS.miles)
-                                # "between Attle and Palmdale" means:
-                                {between}(attle, palmdale),
-                            )"""),
-                    dict(
-                        text="Y is north of Cicero, 5 km east of Bodmin, in southern Wembley.",
-                        objects="cicero, bodmin, wembley",
-                        code="""\
-                            Y = {intersection}(
-                                # "north of Cicero" means:
-                                {north_of}(cicero),
-                                # "5 km east of Bodmin" means:
-                                {east_of}(bodmin, distance=5 * UNITS.km),
-                                # "in southern Wembley" means:
-                                {south_part_of}(wembley),
-                            )"""),
-                ]
+                self.examples = self.multi_examples
+            case "both":
+                self.examples = self.single_examples + self.multi_examples
+
         for example in self.examples:
             code = textwrap.dedent(example['code'].format(**self.function_names))
             match code_block_style:
@@ -265,7 +272,7 @@ def test_llm_geocode_test(georeader: GeoJsonDirReader, score_logger, llm_options
     example_location = llm_options.get('example-location')
     assert example_location in ('system', 'chat')
     example_style = llm_options.get('example-style')
-    assert example_style in ('single', 'multi')
+    assert example_style in ('single', 'multi', 'both')
     code_block_style = llm_options.get('code-block-style')
     assert code_block_style in ('ticks', 'none')
     fine_tune_model = llm_options.get('fine-tune')
