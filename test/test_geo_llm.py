@@ -1,11 +1,16 @@
 import os
 import pathlib
+from annotated_types import doc
 import pytest
 import xml.etree.ElementTree as et
 import re
 import subprocess
 import textwrap
 import traceback
+
+import spacy
+
+nlp = spacy.load("en_core_web_lg")
 
 import normit.geo.ops
 from normit.geo import *
@@ -339,11 +344,20 @@ def test_llm_geocode_test(georeader: GeoJsonDirReader, score_logger, llm_options
 
     # evaluate the prompt + model on the GeoCoDe test data
     tree = et.parse(pathlib.Path(__file__).parent / "data" / "geocode_test.xml")
-    for entity_elem in tree.findall("entities/entity")[:20]:
+    for entity_elem in tree.findall("entities/entity"):
+
+        # only evaluate on the same examples as test_geo_wiki_sample
+        if entity_elem.attrib['id'] not in {'GL420_408', 'GL262_238', 'GL578_059', 'GL219_439', 'GL057_057', 'GL543_093', 'GL249_256', 'GL244_177', 'GL265_134', 'GL079_094'}:
+           continue
 
         # collect the text and replace the target name with "Y"
         text = ''.join(entity_elem.itertext()).strip()
-        text = "Y" + text[text.find(" is"):]
+        doc = nlp(text)
+        verbs = [t for t in doc if t.pos_ in {"AUX", "VERB"} and t.lemma_ != "call" and not t.idx == 0]
+        if not verbs:
+            print(f"skipping example with no verbs: {text}")
+            continue
+        text = f"Y {text[verbs[0].idx:]}"
 
         # read in the target polygon and the reference polygons
         target_name = entity_elem.attrib['wikipedia']
@@ -360,6 +374,9 @@ def test_llm_geocode_test(georeader: GeoJsonDirReader, score_logger, llm_options
             if len(osms) > 5:
                 references = {}
                 break
+
+            # skip OSMs missing from local data
+            osms = [o for o in osms if o not in {'138011339'}]
             references[simplify_name(link.text)] = georeader.read(*osms)
 
         # skip examples with no reference polygons (or skipped above)
