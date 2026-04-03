@@ -10,8 +10,6 @@ import traceback
 
 import spacy
 
-nlp = spacy.load("en_core_web_lg")
-
 import normit.geo.ops
 from normit.geo import *
 
@@ -268,6 +266,9 @@ def test_llm_geocode_test(georeader: GeoJsonDirReader, score_logger, llm_options
     import transformers
     import trl
     import datasets
+    import spacy
+
+    nlp = spacy.load("en_core_web_lg")
 
     # error out if parameters have not been set in the environment
     assert 'model' in llm_options   # e.g., lama3.2:3b, qwen3:4b-instruct, gemma3:4b, gpt-oss:20b, qwen3:0.6b
