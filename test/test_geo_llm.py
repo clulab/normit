@@ -1,14 +1,9 @@
-import os
 import pathlib
-from annotated_types import doc
-import pytest
 import xml.etree.ElementTree as et
 import re
 import subprocess
 import textwrap
 import traceback
-
-import spacy
 
 import normit.geo.ops
 from normit.geo import *
